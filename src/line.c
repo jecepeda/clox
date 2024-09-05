@@ -36,6 +36,7 @@ void writeLineArray(LineArray* chunk, int line) {
 
 int getLine(LineArray* chunk, int offset) {
     int offsetCount = 0;
+    // very inefficient, but it's just for debugging
     for (int i = 0; i < chunk->count; i++) {
         for (int j = 0; j < chunk->lines[i].count; j++) {
             if (offsetCount == offset) {

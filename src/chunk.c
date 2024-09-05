@@ -25,11 +25,31 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
 void freeChunk(Chunk* chunk) {
   FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);
   freeValueArray(&chunk->constants);
-  freeLineArray(&chunk->lines);
   initChunk(chunk);
 }
 
-int addConstant(Chunk* chunk, Value value) {
+void writeConstant(Chunk* chunk, Value value, int line) {
+  size_t size = chunk->constants.count;
+  if (size >= 256u) {
+    writeChunk(chunk, OP_CONSTANT_LONG, line);
+    writeValueArray(&chunk->constants, value);
+
+    uint8_t a, b, c;
+    int temp = size;
+    // now we iteratively get the first byte
+    // and right-shift it to remove it
+    c = temp & 0xFF;
+    temp >>= 0x8;
+    b = temp & 0xFF;
+    temp >>= 0x8;
+    a = temp & 0xFF;
+
+    writeChunk(chunk, a, line);
+    writeChunk(chunk, b, line);
+    writeChunk(chunk, c, line);
+    return;
+  }
+  writeChunk(chunk, OP_CONSTANT, line);
+  writeChunk(chunk, size, line);
   writeValueArray(&chunk->constants, value);
-  return chunk->constants.count - 1;
 }

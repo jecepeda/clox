@@ -7,14 +7,15 @@
 
 typedef enum {
   OP_CONSTANT, // 2 bytes (code, operand)
+  OP_CONSTANT_LONG, // 4 bytes (1 code, 3 operand)
   OP_RETURN, // 1 byte
 } OpCode;
 
 typedef struct {
   // same as a byte
+  uint8_t* code;
   int count;
   int capacity;
-  uint8_t* code;
   LineArray lines;
   ValueArray constants;
 } Chunk;
@@ -23,5 +24,6 @@ void initChunk(Chunk* chunk);
 void writeChunk(Chunk* chunk, uint8_t byte, int line);
 void freeChunk(Chunk* chunk);
 int addConstant(Chunk* chunk, Value value);
+void writeConstant(Chunk* chunk, Value value, int line);
 
 #endif
