@@ -1,5 +1,5 @@
 # Project Settings
-debug ?= 0
+debug ?= 1
 NAME := clox
 SRC_DIR := src
 BUILD_DIR := build

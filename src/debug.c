@@ -1,5 +1,6 @@
 #include "../include/debug.h"
 #include "../include/chunk.h"
+#include "../include/line.h"
 #include <stdint.h>
 #include <stdio.h>
 
@@ -30,11 +31,12 @@ int disassembleInstruction(Chunk* chunk, int offset) {
   // print the number of the operation
   printf("%04d ", offset);
   // print line number if it's different than the previous line
-  if (offset > 0 && chunk->lines[offset] == chunk->lines[offset - 1]) {
+  int line = getLine(&chunk->lines, offset);
+  if (line == -1) {
     printf("   | ");
   }
   else {
-    printf("%4d ", chunk->lines[offset]);
+    printf("%4d ", line);
   }
 
   uint8_t instruction = chunk->code[offset];
