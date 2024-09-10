@@ -13,7 +13,7 @@ void initLineArray(LineArray* lineArray) {
 void increaseLineArrayCapacity(LineArray* lineArray) {
     int oldCapacity = lineArray->capacity;
     lineArray->capacity = GROW_CAPACITY(oldCapacity);
-    lineArray->lines = GROW_ARRAY(Line, lineArray->lines, oldCapacity, lineArray->capacity);
+    lineArray->lines = GROW_ARRAY(Line, lineArray->lines, lineArray->capacity);
 }
 
 void writeLineArray(LineArray* chunk, int line) {
@@ -51,6 +51,6 @@ int getLine(LineArray* chunk, int offset) {
 }
 
 void freeLineArray(LineArray* lineArray) {
-    FREE_ARRAY(Line, lineArray->lines, lineArray->capacity);
+    FREE_ARRAY(Line, lineArray->lines);
     initLineArray(lineArray);
 }

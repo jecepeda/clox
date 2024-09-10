@@ -8,6 +8,11 @@
 typedef enum {
   OP_CONSTANT, // 2 bytes (code, operand)
   OP_CONSTANT_LONG, // 4 bytes (1 code, 3 operand)
+  OP_ADD,
+  OP_SUBTRACT,
+  OP_MULTIPLY,
+  OP_DIVIDE,
+  OP_NEGATE,
   OP_RETURN, // 1 byte
 } OpCode;
 
