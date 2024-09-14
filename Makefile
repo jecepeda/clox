@@ -21,4 +21,9 @@ cmake_build: cmake_configure
 clean:
 	@rm -rf $(BUILD_DIR) $(BIN_DIR)
 
-.PHONY: cmake_configure cmake_build test clean
+format:
+	@echo "Formattting code..."
+	@find . -iname '*.h' -o -iname '*.c' | xargs clang-format -i
+	@echo "Done!"
+
+.PHONY: cmake_configure cmake_build test clean format

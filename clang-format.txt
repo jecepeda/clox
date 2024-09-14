@@ -1,0 +1,9 @@
+﻿---
+ExperimentalAutoDetectBinPacking: 'true'
+BreakBeforeBraces: Attach
+IndentPPDirectives: AfterHash
+NamespaceIndentation: Inner
+SpacesInContainerLiterals: 'true'
+UseTab: Never
+
+...

@@ -5,14 +5,16 @@
 #include "value.h"
 
 typedef struct {
-    Value* items;
-    int top;
-    int capacity;
+  Value *items;
+  int top;
+  int capacity;
 } Stack;
 
-void stackPush(Stack* stack, Value value);
-Value stackPop(Stack* stack);
-void initStack(Stack* stack);
-void freeStack(Stack* stack);
+void stackPush(Stack *stack, Value value);
+Value stackPop(Stack *stack);
+Value stackPeek(Stack *stack, int distance);
+void initStack(Stack *stack);
+void resetStack(Stack *stack);
+void freeStack(Stack *stack);
 
 #endif
