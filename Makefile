@@ -8,6 +8,9 @@ NAME := clox
 # Targets
 build: cmake_build
 
+run: build
+	@./$(BIN_DIR)/$(NAME)
+
 # Configure CMake
 cmake_configure:
 	@mkdir -p $(BUILD_DIR)

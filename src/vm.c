@@ -1,7 +1,7 @@
 #include "../include/vm.h"
 #include "../include/common.h"
 #include "../include/compiler.h"
-// #include "../include/debug.h"
+#include "../include/debug.h"
 #include "../include/memory.h"
 #include "../include/stack.h"
 
@@ -21,12 +21,12 @@ void initVM(Chunk *c) {
 void freeVM() {
   freeObjects();
   // for now, ignore
-  // if (vm.chunk->code != NULL) {
+  // if (vm.chunk->count > 0) {
   //   freeChunk(vm.chunk);
   // }
-  // if (vm.stack.items != NULL) {
-  //   freeStack(&vm.stack);
-  // }
+  if (vm.stack.capacity > 0) {
+    freeStack(&vm.stack);
+  }
 }
 
 static bool isFalsey(Value value) {
@@ -51,12 +51,12 @@ static void concatenate() {
   ObjString *a = AS_STRING(stackPop(&vm.stack));
 
   int length = a->length + b->length;
-  char *chars = ALLOCATE(char, length + 1); // +1 for string terminator
-  memcpy(chars, a->chars, a->length);
-  memcpy(chars + a->length, b->chars, b->length);
-  chars[length] = '\0';
+  ObjString *result = createString(length);
 
-  ObjString *result = takeString(chars, length);
+  memcpy(result->chars, a->chars, a->length);
+  memcpy(result->chars + a->length, b->chars, b->length);
+  result->chars[length] = '\0';
+
   stackPush(&vm.stack, OBJ_VAL(result));
 }
 
@@ -186,7 +186,6 @@ InterpretResult interpret(const char *source) {
 
   InterpretResult result = run();
 
-  // freeChunk(&chunk);
-  // freeStack(&vm.stack);
+  freeChunk(&chunk);
   return result;
 }
