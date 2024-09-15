@@ -14,7 +14,10 @@ typedef struct {
   Chunk *chunk;
   uint8_t *ip; // instruction pointer
   Stack stack;
+  Obj *objects;
 } VM;
+
+extern VM vm;
 
 void initVM(Chunk *c);
 void freeVM();

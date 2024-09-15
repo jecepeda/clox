@@ -2,10 +2,12 @@
 #include "../include/common.h"
 #include "../include/compiler.h"
 // #include "../include/debug.h"
+#include "../include/memory.h"
 #include "../include/stack.h"
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 VM vm;
 
@@ -13,9 +15,11 @@ void initVM(Chunk *c) {
   vm.chunk = c;
   initChunk(vm.chunk);
   initStack(&vm.stack);
+  vm.objects = NULL;
 }
 
 void freeVM() {
+  freeObjects();
   // for now, ignore
   // if (vm.chunk->code != NULL) {
   //   freeChunk(vm.chunk);
@@ -40,6 +44,20 @@ static void runtimeError(const char *format, ...) {
   int line = getLine(&vm.chunk->lines, instruction);
   fprintf(stderr, "[line %d] in script\n", line);
   resetStack(&vm.stack);
+}
+
+static void concatenate() {
+  ObjString *b = AS_STRING(stackPop(&vm.stack));
+  ObjString *a = AS_STRING(stackPop(&vm.stack));
+
+  int length = a->length + b->length;
+  char *chars = ALLOCATE(char, length + 1); // +1 for string terminator
+  memcpy(chars, a->chars, a->length);
+  memcpy(chars + a->length, b->chars, b->length);
+  chars[length] = '\0';
+
+  ObjString *result = takeString(chars, length);
+  stackPush(&vm.stack, OBJ_VAL(result));
 }
 
 static InterpretResult run() {
@@ -82,9 +100,21 @@ static InterpretResult run() {
       stackPush(&vm.stack, constant);
       break;
     }
-    case OP_ADD:
-      BINARY_OP(NUMBER_VAL, +);
+    case OP_ADD: {
+      if (IS_STRING(stackPeek(&vm.stack, 0)) &&
+          IS_STRING(stackPeek(&vm.stack, 1))) {
+        concatenate();
+      } else if (IS_NUMBER(stackPeek(&vm.stack, 0)) &&
+                 IS_NUMBER(stackPeek(&vm.stack, 1))) {
+        double b = AS_NUMBER(stackPop(&vm.stack));
+        double a = AS_NUMBER(stackPop(&vm.stack));
+        stackPush(&vm.stack, NUMBER_VAL(a + b));
+      } else {
+        runtimeError("Operands must be two numbers or two strings.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
       break;
+    }
     case OP_SUBTRACT:
       BINARY_OP(NUMBER_VAL, -);
       break;
