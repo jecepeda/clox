@@ -5,7 +5,8 @@ void stackPush(Stack *stack, Value value) {
   if (stack->capacity <= stack->top) {
     int oldCapacity = stack->capacity;
     stack->capacity = GROW_CAPACITY(oldCapacity);
-    stack->items = GROW_ARRAY(Value, stack->items, stack->capacity);
+    stack->items =
+        GROW_ARRAY(Value, stack->items, oldCapacity, stack->capacity);
   }
   stack->items[stack->top] = value;
   stack->top++;
@@ -26,6 +27,8 @@ void initStack(Stack *stack) {
   stack->items = NULL;
 }
 
-void freeStack(Stack *stack) { FREE_ARRAY(Value, stack->items); }
+void freeStack(Stack *stack) {
+  FREE_ARRAY(Value, stack->items, stack->capacity);
+}
 
 void resetStack(Stack *stack) { stack->top = 0; }

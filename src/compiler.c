@@ -5,6 +5,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef DEBUG_PRINT_CODE
+#include "../include/debug.h"
+#endif
+
 typedef void (*ParseFn)();
 
 typedef struct {
