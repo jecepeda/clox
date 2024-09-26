@@ -3,6 +3,7 @@
 
 #include "chunk.h"
 #include "stack.h"
+#include "table.h"
 
 typedef enum {
   INTERPRET_OK,
@@ -15,6 +16,7 @@ typedef struct {
   uint8_t *ip; // instruction pointer
   Stack stack;
   Obj *objects;
+  Table strings;
 } VM;
 
 extern VM vm;

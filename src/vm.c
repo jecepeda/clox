@@ -15,11 +15,13 @@ void initVM(Chunk *c) {
   vm.chunk = c;
   initChunk(vm.chunk);
   initStack(&vm.stack);
+  initTable(&vm.strings);
   vm.objects = NULL;
 }
 
 void freeVM() {
   freeObjects();
+  freeTable(&vm.strings);
   // for now, ignore
   // if (vm.chunk->count > 0) {
   //   freeChunk(vm.chunk);
