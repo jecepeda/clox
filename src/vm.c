@@ -1,10 +1,13 @@
-#include "../include/vm.h"
-#include "../include/common.h"
-#include "../include/compiler.h"
-#include "../include/debug.h"
-#include "../include/memory.h"
-#include "../include/stack.h"
+#include "vm.h"
+#include "chunk.h"
+#include "common.h"
+#include "compiler.h"
+#include "debug.h"
+#include "memory.h"
+#include "stack.h"
+#include "value.h"
 
+#include <_printf.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -16,12 +19,14 @@ void initVM(Chunk *c) {
   initChunk(vm.chunk);
   initStack(&vm.stack);
   initTable(&vm.strings);
+  initTable(&vm.globals);
   vm.objects = NULL;
 }
 
 void freeVM() {
   freeObjects();
   freeTable(&vm.strings);
+  freeTable(&vm.globals);
   // for now, ignore
   // if (vm.chunk->count > 0) {
   //   freeChunk(vm.chunk);
@@ -79,6 +84,7 @@ static InterpretResult run() {
   (vm.chunk->constants.values[isLong ? ((READ_BYTE() << 16) |                  \
                                         (READ_BYTE() << 8) | (READ_BYTE()))    \
                                      : READ_BYTE()])
+#define READ_STRING(isLong) AS_STRING(READ_CONSTANT(isLong))
   for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
     if (vm.stack.top > 0) {
@@ -142,6 +148,45 @@ static InterpretResult run() {
       }
       stackPush(&vm.stack, NUMBER_VAL(-AS_NUMBER(stackPop(&vm.stack))));
       break;
+    case OP_PRINT: {
+      printValue(stackPop(&vm.stack));
+      printf("\n");
+      break;
+    }
+    case OP_POP:
+      stackPop(&vm.stack);
+      break;
+    case OP_DEFINE_GLOBAL_LONG:
+      isLong = true; // don't break, fall through
+    case OP_DEFINE_GLOBAL: {
+      ObjString *name = READ_STRING(isLong);
+      tableSet(&vm.globals, name, stackPeek(&vm.stack, 0));
+      stackPop(&vm.stack);
+      break;
+    }
+    case OP_GET_GLOBAL_LONG:
+      isLong = true; // don't break, fall through
+    case OP_GET_GLOBAL: {
+      ObjString *name = READ_STRING(isLong);
+      Value value;
+      if (!tableGet(&vm.globals, name, &value)) {
+        runtimeError("Undefined variable '%s'.", name->chars);
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      stackPush(&vm.stack, value);
+      break;
+    }
+    case OP_SET_GLOBAL_LONG:
+      isLong = true; // don't break, fall through
+    case OP_SET_GLOBAL: {
+      ObjString *name = READ_STRING(isLong);
+      if (tableSet(&vm.globals, name, stackPeek(&vm.stack, 0))) {
+        tableDelete(&vm.globals, name);
+        runtimeError("Undefined variable '%s'.", name->chars);
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      break;
+    }
     case OP_GREATER:
       BINARY_OP(BOOL_VAL, >);
       break;
@@ -149,10 +194,8 @@ static InterpretResult run() {
       BINARY_OP(BOOL_VAL, <);
       break;
     case OP_RETURN:
-      printValue(stackPop(&vm.stack));
-      printf("\n");
+      // exit interpreter
       return INTERPRET_OK;
-      break;
     case OP_NIL:
       stackPush(&vm.stack, NIL_VAL);
       break;
@@ -171,6 +214,7 @@ static InterpretResult run() {
 }
 
 #undef READ_CONSTANT
+#undef READ_STRING
 #undef BINARY_OP
 #undef READ_BYTE
 

@@ -1,5 +1,5 @@
-#include "../include/stack.h"
-#include "../include/memory.h"
+#include "stack.h"
+#include "memory.h"
 
 void stackPush(Stack *stack, Value value) {
   if (stack->capacity <= stack->top) {
@@ -18,7 +18,7 @@ Value stackPop(Stack *stack) {
 }
 
 Value stackPeek(Stack *stack, int distance) {
-  return stack->items[1 - distance];
+  return stack->items[stack->top - 1 - distance];
 }
 
 void initStack(Stack *stack) {

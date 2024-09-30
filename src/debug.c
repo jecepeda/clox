@@ -1,6 +1,6 @@
-#include "../include/debug.h"
-#include "../include/chunk.h"
-#include "../include/line.h"
+#include "debug.h"
+#include "chunk.h"
+#include "line.h"
 #include <stdint.h>
 #include <stdio.h>
 
@@ -10,6 +10,7 @@ void disassembleChunk(Chunk *chunk, const char *name) {
   for (int offset = 0; offset < chunk->count;) {
     offset = disassembleInstruction(chunk, offset);
   }
+  printf("== %s end ==\n", name);
 }
 
 static int simpleInstruction(const char *name, int offset) {
@@ -46,6 +47,18 @@ int disassembleInstruction(Chunk *chunk, int offset) {
 
   uint8_t instruction = chunk->code[offset];
   switch (instruction) {
+  case OP_DEFINE_GLOBAL_LONG:
+    return constantInstruction(true, "OP_DEFINE_GLOBAL_LONG", chunk, offset);
+  case OP_DEFINE_GLOBAL:
+    return constantInstruction(false, "OP_DEFINE_GLOBAL", chunk, offset);
+  case OP_GET_GLOBAL_LONG:
+    return constantInstruction(true, "OP_GET_GLOBAL_LONG", chunk, offset);
+  case OP_GET_GLOBAL:
+    return constantInstruction(false, "OP_GET_GLOBAL", chunk, offset);
+  case OP_SET_GLOBAL_LONG:
+    return constantInstruction(true, "OP_SET_GLOBAL_LONG", chunk, offset);
+  case OP_SET_GLOBAL:
+    return constantInstruction(false, "OP_SET_GLOBAL", chunk, offset);
   case OP_CONSTANT_LONG:
     return constantInstruction(true, "OP_CONSTANT_LONG", chunk, offset);
   case OP_CONSTANT:
@@ -54,6 +67,10 @@ int disassembleInstruction(Chunk *chunk, int offset) {
     return simpleInstruction("OP_RETURN", offset);
   case OP_NEGATE:
     return simpleInstruction("OP_NEGATE", offset);
+  case OP_PRINT:
+    return simpleInstruction("OP_PRINT", offset);
+  case OP_POP:
+    return simpleInstruction("OP_POP", offset);
   case OP_ADD:
     return simpleInstruction("OP_ADD", offset);
   case OP_SUBTRACT:

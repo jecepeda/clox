@@ -9,7 +9,7 @@ NAME := clox
 build: cmake_build
 
 run: build
-	@./$(BIN_DIR)/$(NAME)
+	@./$(BIN_DIR)/$(NAME) $(filename)
 
 # Configure CMake
 cmake_configure:

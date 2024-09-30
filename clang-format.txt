@@ -1,4 +1,6 @@
 ﻿---
+BasedOnStyle: Google
+AlignTrailingComments: 'true'
 ExperimentalAutoDetectBinPacking: 'true'
 BreakBeforeBraces: Attach
 IndentPPDirectives: AfterHash

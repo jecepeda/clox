@@ -1,5 +1,5 @@
-#include "../include/line.h"
-#include "../include/memory.h"
+#include "line.h"
+#include "memory.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
