@@ -2,6 +2,8 @@
 #include "chunk.h"
 #include "common.h"
 #include "scanner.h"
+#include "table.h"
+#include "value.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -38,6 +40,7 @@ typedef struct {
   Precedence precedence;
 } ParseRule;
 
+Table identifiers;
 Parser parser;
 Chunk *compilingChunk;
 
@@ -123,8 +126,14 @@ static ParseRule *getRule(TokenType type);
 static void parsePrecedence(Precedence precedence);
 
 static size_t identifierConstant(Token *name) {
-  return makeConstant(currentChunk(),
-                      OBJ_VAL(copyString(name->start, name->length)));
+  ObjString *identifier = copyString(name->start, name->length);
+  Value value;
+  if (tableGet(&identifiers, identifier, &value)) {
+    return AS_IDX(value);
+  }
+  size_t constant = makeConstant(currentChunk(), OBJ_VAL(identifier));
+  tableSet(&identifiers, identifier, IDX_VAL(constant));
+  return constant;
 }
 
 static size_t parseVariable(const char *errorMessage) {
@@ -406,6 +415,7 @@ bool compile(const char *source, Chunk *chunk) {
   initScanner(source);
 
   compilingChunk = chunk;
+  initTable(&identifiers);
   // reset parser
   parser.hadError = false;
   parser.panicMode = false;
@@ -415,5 +425,6 @@ bool compile(const char *source, Chunk *chunk) {
     declaration();
   }
   endCompiler();
+  freeTable(&identifiers);
   return !parser.hadError;
 }
