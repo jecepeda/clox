@@ -11,14 +11,20 @@ output_file="examples/variables.lox"
 # Clear the file if it exists
 > "$output_file"
 
-n=500
+n=1000
 
 # Loop to generate n variables
 for i in $(seq 1 $n); do
   echo "var a$i = $i;" >> "$output_file"
 done
 for i in $(seq 1 $n); do
-  echo "print a$i;" >> "$output_file"
+  echo "var s$i = \"string $i\";" >> "$output_file"
+done
+for i in $(seq 2 $n); do
+  echo "print a$i + a$((i-1));" >> "$output_file"
+done
+for i in $(seq 2 $n); do
+  echo "print s$i + \" \" + s$((i-1));" >> "$output_file"
 done
 
 echo "Variables written to $output_file"
