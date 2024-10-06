@@ -34,6 +34,17 @@ static int constantInstruction(bool isLong, const char *name, Chunk *chunk,
   return offset + (isLong ? 4 : 2);
 }
 
+static int byteInstruction(bool isLong, const char *name, Chunk *chunk,
+                           int offset) {
+  uint32_t slot = chunk->code[offset + 1];
+  if (isLong) {
+    slot =
+        (slot << 16) | (chunk->code[offset + 2] << 8) | chunk->code[offset + 3];
+  }
+  printf("%-16s %4d\n", name, slot);
+  return offset + (isLong ? 4 : 2);
+}
+
 int disassembleInstruction(Chunk *chunk, int offset) {
   // print the number of the operation
   printf("#%04d ", offset);
@@ -63,6 +74,14 @@ int disassembleInstruction(Chunk *chunk, int offset) {
     return constantInstruction(true, "OP_CONSTANT_LONG", chunk, offset);
   case OP_CONSTANT:
     return constantInstruction(false, "OP_CONSTANT", chunk, offset);
+  // case OP_GET_LOCAL_LONG:
+  //   return byteInstruction(true, "OP_GET_LOCAL_LONG", chunk, offset);
+  case OP_GET_LOCAL:
+    return byteInstruction(false, "OP_GET_LOCAL", chunk, offset);
+  // case OP_SET_LOCAL_LONG:
+  //   return byteInstruction(true, "OP_SET_LOCAL_LONG", chunk, offset);
+  case OP_SET_LOCAL:
+    return byteInstruction(false, "OP_SET_LOCAL", chunk, offset);
   case OP_RETURN:
     return simpleInstruction("OP_RETURN", offset);
   case OP_NEGATE:

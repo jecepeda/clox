@@ -2,7 +2,7 @@
 #include "chunk.h"
 #include "common.h"
 #include "compiler.h"
-#include "debug.h"
+// #include "debug.h"
 #include "memory.h"
 #include "stack.h"
 #include "value.h"
@@ -139,6 +139,20 @@ static InterpretResult run() {
       Value b = stackPop(&vm.stack);
       Value a = stackPop(&vm.stack);
       stackPush(&vm.stack, BOOL_VAL(valuesEqual(a, b)));
+      break;
+    }
+    // case OP_GET_LOCAL_LONG:
+    //   isLong = true; // don't break, fall through
+    case OP_GET_LOCAL: {
+      uint8_t slot = READ_BYTE();
+      stackPush(&vm.stack, vm.stack.items[slot]);
+      break;
+    }
+    // case OP_SET_LOCAL_LONG:
+    //   isLong = true; // don't break, fall through
+    case OP_SET_LOCAL: {
+      uint8_t slot = READ_BYTE();
+      vm.stack.items[slot] = stackPeek(&vm.stack, 0);
       break;
     }
     case OP_NEGATE:

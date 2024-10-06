@@ -19,14 +19,22 @@
   } while (false)
 
 typedef enum {
-  OP_CONSTANT,           // 2 bytes (code, operand)
-  OP_CONSTANT_LONG,      // 4 bytes (1 code, 3 operand)
+  // constants
+  OP_CONSTANT,      // 2 bytes (code, operand)
+  OP_CONSTANT_LONG, // 4 bytes (1 code, 3 operand)
+  // globals
   OP_DEFINE_GLOBAL,      // 2 bytes (code, operand)
   OP_DEFINE_GLOBAL_LONG, // 4 bytes (1 code, 3 operand)
   OP_SET_GLOBAL,         // 2 bytes (code, operand)
   OP_SET_GLOBAL_LONG,    // 4 bytes (1 code, 3 operand)
   OP_GET_GLOBAL,         // 2 bytes (code, operand)
   OP_GET_GLOBAL_LONG,    // 4 bytes (1 code, 3 operand)
+  // locals
+  OP_GET_LOCAL, // 2 bytes (code, operand)
+  // OP_GET_LOCAL_LONG, // 4 bytes (1 code, 3 operand)
+  OP_SET_LOCAL, // 2 bytes (code, operand)
+  // OP_SET_LOCAL_LONG, // 4 bytes (1 code, 3 operand)
+  // operators, etc
   OP_NIL,
   OP_TRUE,
   OP_FALSE,
