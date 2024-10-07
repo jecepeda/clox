@@ -1,0 +1,39 @@
+var a = "foo";
+if (a == "foo") {
+  print "a is foo";
+} else {
+  print "a is not foo";
+}
+if (1 > 0 and 2 > 1) {
+  print "1 > 0 and 2 > 1";
+} else {
+  print "1 is not greater than 0 or 2 is not greater than 1";
+}
+if (0 < 2 or 1 < 0) {
+  print "0 < 2 or 1 < 0";
+} else {
+  print "0 is not less than 2 and 1 is not less than 0";
+}
+
+if (true) {
+  print "true";
+} else {
+  print "false";
+}
+
+if (true == false){
+  print "true == false";
+} else if (true == true){
+  print "true == true";
+}
+
+if (false) {
+  print "true";
+} else {
+  print "false";
+}
+
+// expected output:
+// a is foo
+// 1 > 0 and 2 > 1
+// 0 < 2 or 1 < 0

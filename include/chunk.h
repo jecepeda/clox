@@ -49,6 +49,9 @@ typedef enum {
   OP_DIVIDE,
   OP_NEGATE,
   OP_PRINT,
+  OP_LOOP,
+  OP_JUMP,
+  OP_JUMP_IF_FALSE,
   OP_RETURN,
 } OpCode;
 

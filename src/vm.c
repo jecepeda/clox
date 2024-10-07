@@ -84,6 +84,7 @@ static InterpretResult run() {
   (vm.chunk->constants.values[isLong ? ((READ_BYTE() << 16) |                  \
                                         (READ_BYTE() << 8) | (READ_BYTE()))    \
                                      : READ_BYTE()])
+#define READ_SHORT() (vm.ip += 2, (uint16_t)((vm.ip[-2] << 8) | vm.ip[-1]))
 #define READ_SLOT(isLong)                                                      \
   isLong ? ((READ_BYTE() << 16) | (READ_BYTE() << 8) | (READ_BYTE()))          \
          : READ_BYTE()
@@ -204,6 +205,23 @@ static InterpretResult run() {
       }
       break;
     }
+    case OP_JUMP: {
+      uint16_t offset = READ_SHORT();
+      vm.ip += offset;
+      break;
+    }
+    case OP_JUMP_IF_FALSE: {
+      uint16_t offset = READ_SHORT();
+      if (isFalsey(stackPeek(&vm.stack, 0))) {
+        vm.ip += offset;
+      }
+      break;
+    }
+    case OP_LOOP: {
+      uint16_t offset = READ_SHORT();
+      vm.ip -= offset;
+      break;
+    }
     case OP_GREATER:
       BINARY_OP(BOOL_VAL, >);
       break;
@@ -230,6 +248,8 @@ static InterpretResult run() {
   }
 }
 
+#undef READ_SHORT
+#undef READ_SLOT
 #undef READ_CONSTANT
 #undef READ_STRING
 #undef BINARY_OP
