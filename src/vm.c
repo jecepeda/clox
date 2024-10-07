@@ -84,6 +84,9 @@ static InterpretResult run() {
   (vm.chunk->constants.values[isLong ? ((READ_BYTE() << 16) |                  \
                                         (READ_BYTE() << 8) | (READ_BYTE()))    \
                                      : READ_BYTE()])
+#define READ_SLOT(isLong)                                                      \
+  isLong ? ((READ_BYTE() << 16) | (READ_BYTE() << 8) | (READ_BYTE()))          \
+         : READ_BYTE()
 #define READ_STRING(isLong) AS_STRING(READ_CONSTANT(isLong))
   for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
@@ -141,17 +144,17 @@ static InterpretResult run() {
       stackPush(&vm.stack, BOOL_VAL(valuesEqual(a, b)));
       break;
     }
-    // case OP_GET_LOCAL_LONG:
-    //   isLong = true; // don't break, fall through
+    case OP_GET_LOCAL_LONG:
+      isLong = true; // don't break, fall through
     case OP_GET_LOCAL: {
-      uint8_t slot = READ_BYTE();
+      uint32_t slot = READ_SLOT(isLong);
       stackPush(&vm.stack, vm.stack.items[slot]);
       break;
     }
-    // case OP_SET_LOCAL_LONG:
-    //   isLong = true; // don't break, fall through
+    case OP_SET_LOCAL_LONG:
+      isLong = true; // don't break, fall through
     case OP_SET_LOCAL: {
-      uint8_t slot = READ_BYTE();
+      uint32_t slot = READ_SLOT(isLong);
       vm.stack.items[slot] = stackPeek(&vm.stack, 0);
       break;
     }

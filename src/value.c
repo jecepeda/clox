@@ -40,7 +40,7 @@ void printValue(Value value) {
     printf("%g", AS_NUMBER(value));
     break;
   case VAL_IDX:
-    printf("%zu", AS_IDX(value));
+    printf("%u", AS_IDX(value));
     break;
   case VAL_OBJ:
     printObject(value);

@@ -30,10 +30,10 @@ typedef enum {
   OP_GET_GLOBAL,         // 2 bytes (code, operand)
   OP_GET_GLOBAL_LONG,    // 4 bytes (1 code, 3 operand)
   // locals
-  OP_GET_LOCAL, // 2 bytes (code, operand)
-  // OP_GET_LOCAL_LONG, // 4 bytes (1 code, 3 operand)
-  OP_SET_LOCAL, // 2 bytes (code, operand)
-  // OP_SET_LOCAL_LONG, // 4 bytes (1 code, 3 operand)
+  OP_GET_LOCAL,      // 2 bytes (code, operand)
+  OP_GET_LOCAL_LONG, // 4 bytes (1 code, 3 operand)
+  OP_SET_LOCAL,      // 2 bytes (code, operand)
+  OP_SET_LOCAL_LONG, // 4 bytes (1 code, 3 operand)
   // operators, etc
   OP_NIL,
   OP_TRUE,
@@ -55,8 +55,8 @@ typedef enum {
 typedef struct {
   // same as a byte
   uint8_t *code;
-  int count;
-  int capacity;
+  uint32_t count;
+  uint32_t capacity;
   LineArray lines;
   ValueArray constants;
 } Chunk;
@@ -65,7 +65,7 @@ void initChunk(Chunk *chunk);
 void writeChunk(Chunk *chunk, uint8_t byte, int line);
 void freeChunk(Chunk *chunk);
 // make constant saves a variable to the chunk
-size_t makeConstant(Chunk *chunk, Value value);
+uint32_t makeConstant(Chunk *chunk, Value value);
 // write constant writes a constant to the chunk alongside OP_CONSTANT
 void writeConstant(Chunk *chunk, Value value, int line);
 

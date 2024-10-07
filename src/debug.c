@@ -74,12 +74,12 @@ int disassembleInstruction(Chunk *chunk, int offset) {
     return constantInstruction(true, "OP_CONSTANT_LONG", chunk, offset);
   case OP_CONSTANT:
     return constantInstruction(false, "OP_CONSTANT", chunk, offset);
-  // case OP_GET_LOCAL_LONG:
-  //   return byteInstruction(true, "OP_GET_LOCAL_LONG", chunk, offset);
+  case OP_GET_LOCAL_LONG:
+    return byteInstruction(true, "OP_GET_LOCAL_LONG", chunk, offset);
   case OP_GET_LOCAL:
     return byteInstruction(false, "OP_GET_LOCAL", chunk, offset);
-  // case OP_SET_LOCAL_LONG:
-  //   return byteInstruction(true, "OP_SET_LOCAL_LONG", chunk, offset);
+  case OP_SET_LOCAL_LONG:
+    return byteInstruction(true, "OP_SET_LOCAL_LONG", chunk, offset);
   case OP_SET_LOCAL:
     return byteInstruction(false, "OP_SET_LOCAL", chunk, offset);
   case OP_RETURN:

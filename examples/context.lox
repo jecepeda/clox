@@ -1,0 +1,13 @@
+  var a = "outer";
+  {
+    var a = "inner";
+    print a;
+    a = "new inner";
+    print a;
+  }
+  print a;
+
+// expected output:
+// inner
+// new inner
+// outer

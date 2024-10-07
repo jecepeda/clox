@@ -1,6 +1,7 @@
 #include "compiler.h"
 #include "chunk.h"
 #include "common.h"
+#include "memory.h"
 #include "scanner.h"
 #include "table.h"
 #include "value.h"
@@ -47,9 +48,10 @@ typedef struct {
 } Local;
 
 typedef struct {
-  Local locals[UINT8_COUNT];
-  int localCount;
+  uint32_t localCount;
+  uint32_t localCapacity;
   int scopeDepth;
+  Local *locals;
 } Compiler;
 
 Table identifiers;
@@ -59,6 +61,8 @@ Chunk *compilingChunk;
 
 static void initCompiler(Compiler *compiler) {
   compiler->localCount = 0;
+  compiler->localCapacity = 0;
+  compiler->locals = NULL;
   compiler->scopeDepth = 0;
   current = compiler;
 }
@@ -155,13 +159,13 @@ static void declaration();
 static ParseRule *getRule(TokenType type);
 static void parsePrecedence(Precedence precedence);
 
-static size_t identifierConstant(Token *name) {
+static uint32_t identifierConstant(Token *name) {
   ObjString *identifier = copyString(name->start, name->length);
   Value value;
   if (tableGet(&identifiers, identifier, &value)) {
     return AS_IDX(value);
   }
-  size_t constant = makeConstant(currentChunk(), OBJ_VAL(identifier));
+  uint32_t constant = makeConstant(currentChunk(), OBJ_VAL(identifier));
   tableSet(&identifiers, identifier, IDX_VAL(constant));
   return constant;
 }
@@ -172,7 +176,7 @@ static bool identifiersEqual(Token *a, Token *b) {
   return memcmp(a->start, b->start, a->length) == 0;
 }
 
-static size_t resolveLocal(Compiler *compiler, Token *name) {
+static uint32_t resolveLocal(Compiler *compiler, Token *name) {
   for (int i = compiler->localCount - 1; i >= 0; i--) {
     Local *local = &compiler->locals[i];
     if (identifiersEqual(name, &local->name)) {
@@ -183,24 +187,23 @@ static size_t resolveLocal(Compiler *compiler, Token *name) {
     }
   }
 
-  return -1;
+  return -1; // no local variable found
 }
 
 static void addLocal(Token name) {
-  if (current->localCount == UINT8_COUNT) {
-    error("Too many local variables in function.");
-    return;
+  if (current->localCount >= current->localCapacity) {
+    int oldCapacity = current->localCapacity;
+    current->localCapacity = GROW_CAPACITY(current->localCapacity);
+    current->locals =
+        GROW_ARRAY(Local, current->locals, oldCapacity, current->localCapacity);
   }
-  Local *local = &current->locals[current->localCount++];
-  local->name = name;
-  local->depth = -1;
+  current->locals[current->localCount++] = (Local){name, -1};
 }
 
 static void declareVariable() {
   if (current->scopeDepth == 0)
     return;
 
-  // check that the varible hasn't been declared in the same scope
   Token *name = &parser.previous;
   for (int i = current->localCount - 1; i >= 0; i--) {
     Local *local = &current->locals[i];
@@ -215,7 +218,7 @@ static void declareVariable() {
   addLocal(*name);
 }
 
-static size_t parseVariable(const char *errorMessage) {
+static uint32_t parseVariable(const char *errorMessage) {
   consume(TOKEN_IDENTIFIER, errorMessage);
 
   declareVariable();
@@ -230,7 +233,7 @@ static void markInitialized() {
   current->locals[current->localCount - 1].depth = current->scopeDepth;
 }
 
-static void defineVariable(size_t global) {
+static void defineVariable(uint32_t global) {
   // if the variable is local, we don't need to define it
   if (current->scopeDepth > 0) {
     markInitialized();
@@ -267,18 +270,24 @@ static OpCode getInstructionForNamedVariable(Token name, bool canAssign) {
   return OP_GET_GLOBAL;
 }
 
-static void handleLocal(Token name, bool canAssign, size_t localIdx) {
+static void handleLocal(bool canAssign, uint32_t localIdx) {
+  OpCode operation;
   if (canAssign && match(TOKEN_EQUAL)) {
     expression();
-    emitByte(OP_SET_LOCAL);
+    operation = OP_SET_LOCAL;
   } else {
-    emitByte(OP_GET_LOCAL);
+    operation = OP_GET_LOCAL;
   }
-  emitByte(localIdx);
+  if (localIdx >= 256u) {
+    emitByte(++operation);
+    WRITE_CHUNK_LONG(currentChunk(), localIdx, parser.previous.line);
+    return;
+  }
+  emitBytes(operation, localIdx);
 }
 
 static void handleGlobal(Token name, bool canAssign) {
-  size_t arg = identifierConstant(&name);
+  uint32_t arg = identifierConstant(&name);
   OpCode operation;
   if (canAssign && match(TOKEN_EQUAL)) {
     expression();
@@ -295,9 +304,9 @@ static void handleGlobal(Token name, bool canAssign) {
 }
 
 static void namedVariable(Token name, bool canAssign) {
-  size_t arg = resolveLocal(current, &name);
+  uint32_t arg = resolveLocal(current, &name);
   if (arg != -1) {
-    handleLocal(name, canAssign, arg);
+    handleLocal(canAssign, arg); // local names are not saved
   } else {
     handleGlobal(name, canAssign);
   }
@@ -458,7 +467,7 @@ static ParseRule *getRule(TokenType type) { return &rules[type]; }
 static void expression() { parsePrecedence(PREC_ASSIGNMENT); }
 
 static void varDeclaration() {
-  size_t global = parseVariable("Expect variable name");
+  uint32_t global = parseVariable("Expect variable name");
 
   if (match(TOKEN_EQUAL)) {
     expression();

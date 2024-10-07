@@ -19,7 +19,7 @@ typedef struct {
   union {
     bool boolean;
     double number;
-    size_t index;
+    uint32_t index;
     Obj *obj;
   } as;
 } Value;

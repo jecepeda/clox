@@ -28,13 +28,13 @@ void freeChunk(Chunk *chunk) {
   initChunk(chunk);
 }
 
-size_t makeConstant(Chunk *chunk, Value value) {
+uint32_t makeConstant(Chunk *chunk, Value value) {
   writeValueArray(&chunk->constants, value);
   return chunk->constants.count - 1;
 }
 
 void writeConstant(Chunk *chunk, Value value, int line) {
-  size_t size = chunk->constants.count;
+  uint32_t size = chunk->constants.count;
   if (size >= 256u) {
     writeChunk(chunk, OP_CONSTANT_LONG, line);
     writeValueArray(&chunk->constants, value);
