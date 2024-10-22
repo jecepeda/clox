@@ -2,8 +2,11 @@
 #define clox_vm_h
 
 #include "chunk.h"
+#include "object.h"
 #include "stack.h"
 #include "table.h"
+
+#define FRAMES_MAX 64
 
 typedef enum {
   INTERPRET_OK,
@@ -12,8 +15,15 @@ typedef enum {
 } InterpretResult;
 
 typedef struct {
-  Chunk *chunk;
-  uint8_t *ip; // instruction pointer
+  ObjFunction *function;
+  uint8_t *ip;
+  int base;
+} CallFrame;
+
+typedef struct {
+  CallFrame frames[FRAMES_MAX];
+  int frameCount;
+
   Stack stack;
   Obj *objects;
   Table strings;
@@ -22,7 +32,7 @@ typedef struct {
 
 extern VM vm;
 
-void initVM(Chunk *c);
+void initVM();
 void freeVM();
 InterpretResult interpret(const char *source);
 

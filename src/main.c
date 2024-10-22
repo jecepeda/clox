@@ -59,8 +59,7 @@ static void runFile(const char *path) {
 }
 
 int main(int argc, const char *argv[]) {
-  Chunk chunk;
-  initVM(&chunk);
+  initVM();
 
   if (argc == 1) {
     repl();

@@ -47,7 +47,15 @@ typedef struct {
   int depth;
 } Local;
 
+typedef enum {
+  TYPE_FUNCTION,
+  TYPE_SCRIPT,
+} FunctionType;
+
 typedef struct {
+  ObjFunction *function;
+  FunctionType type;
+
   uint32_t localCount;
   uint32_t localCapacity;
   int scopeDepth;
@@ -59,15 +67,28 @@ Parser parser;
 Compiler *current = NULL;
 Chunk *compilingChunk;
 
-static void initCompiler(Compiler *compiler) {
+static void growLocalArray();
+
+static void initCompiler(Compiler *compiler, FunctionType type) {
+  compiler->function = NULL;
+  compiler->type = type;
+
   compiler->localCount = 0;
   compiler->localCapacity = 0;
   compiler->locals = NULL;
   compiler->scopeDepth = 0;
+  compiler->function = newFunction();
+
   current = compiler;
+
+  growLocalArray();
+  Local *local = &current->locals[current->localCount++];
+  local->depth = 0;
+  local->name.start = "";
+  local->name.length = 0;
 }
 
-static Chunk *currentChunk() { return compilingChunk; }
+static Chunk *currentChunk() { return &current->function->chunk; }
 
 static void errorAt(Token *token, const char *message) {
   parser.panicMode = true;
@@ -154,13 +175,17 @@ static int emitJump(uint8_t instruction) {
 
 static void emitReturn() { emitByte(OP_RETURN); }
 
-static void endCompiler() {
+static ObjFunction *endCompiler() {
+  ObjFunction *function = current->function;
   emitReturn();
 #ifdef DEBUG_PRINT_CODE
   if (!parser.hadError) {
-    disassembleChunk(currentChunk(), "code");
+    disassembleChunk(currentChunk(), function->name != NULL
+                                         ? function->name->chars
+                                         : "<script>");
   }
 #endif
+  return function;
 }
 
 static void beginScope() { current->scopeDepth++; }
@@ -211,12 +236,16 @@ static uint32_t resolveLocal(Compiler *compiler, Token *name) {
   return -1; // no local variable found
 }
 
+static void growLocalArray() {
+  int oldCapacity = current->localCapacity;
+  current->localCapacity = GROW_CAPACITY(current->localCapacity);
+  current->locals =
+      GROW_ARRAY(Local, current->locals, oldCapacity, current->localCapacity);
+}
+
 static void addLocal(Token name) {
   if (current->localCount >= current->localCapacity) {
-    int oldCapacity = current->localCapacity;
-    current->localCapacity = GROW_CAPACITY(current->localCapacity);
-    current->locals =
-        GROW_ARRAY(Local, current->locals, oldCapacity, current->localCapacity);
+    growLocalArray();
   }
   current->locals[current->localCount++] = (Local){name, -1};
 }
@@ -693,13 +722,12 @@ static void statement() {
   }
 }
 
-bool compile(const char *source, Chunk *chunk) {
+ObjFunction *compile(const char *source) {
   initScanner(source);
 
   Compiler compiler;
-  initCompiler(&compiler);
+  initCompiler(&compiler, TYPE_SCRIPT);
 
-  compilingChunk = chunk;
   initTable(&identifiers);
   // reset parser
   parser.hadError = false;
@@ -709,7 +737,7 @@ bool compile(const char *source, Chunk *chunk) {
   while (!match(TOKEN_EOF)) {
     declaration();
   }
-  endCompiler();
+  ObjFunction *function = endCompiler();
   freeTable(&identifiers);
-  return !parser.hadError;
+  return parser.hadError ? NULL : function;
 }
