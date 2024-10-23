@@ -1,23 +1,26 @@
 #include "vm.h"
-#include "chunk.h"
-#include "common.h"
 #include "compiler.h"
-// #include "debug.h"
 #include "memory.h"
-#include "stack.h"
-#include "value.h"
+#include "object.h"
 
-#include <_printf.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
+
+static void defineNative(const char *name, NativeFn function);
 
 VM vm;
+
+static Value clockNative(int argCount, Value *args) {
+  return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+}
 
 void initVM() {
   initStack(&vm.stack);
   initTable(&vm.strings);
   initTable(&vm.globals);
+  defineNative("clock", clockNative);
   vm.objects = NULL;
 }
 
@@ -46,12 +49,29 @@ static void runtimeError(const char *format, ...) {
   va_end(args);
   fputs("\n", stderr);
 
-  CallFrame *frame = &vm.frames[vm.frameCount - 1];
-  size_t instruction = frame->ip - frame->function->chunk.code - 1;
-  int line = getLine(&frame->function->chunk.lines, instruction);
+  for (int i = vm.frameCount - 1; i >= 0; i--) {
+    CallFrame *frame = &vm.frames[i];
+    ObjFunction *function = frame->function;
+    int instruction = frame->ip - function->chunk.code - 1;
+    int line = getLine(&frame->function->chunk.lines, instruction);
+    fprintf(stderr, "[line %d] in ", line);
+    if (function->name == NULL) {
+      fprintf(stderr, "script\n");
+    } else {
+      fprintf(stderr, "%s()\n", function->name->chars);
+    }
+  }
 
-  fprintf(stderr, "[line %d] in script\n", line);
   resetStack(&vm.stack);
+}
+
+static void defineNative(const char *name, NativeFn function) {
+  stackPush(&vm.stack, OBJ_VAL(copyString(name, (int)strlen(name))));
+  stackPush(&vm.stack, OBJ_VAL(newNative(function)));
+  tableSet(&vm.globals, AS_STRING(stackPeek(&vm.stack, 1)),
+           stackPeek(&vm.stack, 0));
+  stackPop(&vm.stack);
+  stackPop(&vm.stack);
 }
 
 static void concatenate() {
@@ -66,6 +86,43 @@ static void concatenate() {
   result->chars[length] = '\0';
 
   stackPush(&vm.stack, OBJ_VAL(result));
+}
+
+static bool call(ObjFunction *function, int argCount) {
+  if (argCount != function->arity) {
+    runtimeError("Expected %d arguments but got %d.", function->arity,
+                 argCount);
+    return false;
+  }
+  if (vm.frameCount == FRAMES_MAX) {
+    runtimeError("Stack overflow.");
+    return false;
+  }
+  CallFrame *frame = &vm.frames[vm.frameCount++];
+  frame->function = function;
+  frame->ip = function->chunk.code;
+  frame->base = vm.stack.top - argCount - 1;
+  return true;
+}
+
+static bool callValue(Value callee, int argCount) {
+  if (IS_OBJ(callee)) {
+    switch (OBJ_TYPE(callee)) {
+    case OBJ_FUNCTION:
+      return call(AS_FUNCTION(callee), argCount);
+    case OBJ_NATIVE: {
+      NativeFn native = AS_NATIVE(callee);
+      Value result = native(argCount, &vm.stack.items[vm.stack.top - argCount]);
+      vm.stack.top -= argCount + 1;
+      stackPush(&vm.stack, result);
+      return true;
+    }
+    default:
+      break; // non-callable object type
+    }
+  }
+  runtimeError("Can only call functions and classes");
+  return false;
 }
 
 static InterpretResult run() {
@@ -97,7 +154,7 @@ static InterpretResult run() {
 #ifdef DEBUG_TRACE_EXECUTION
     if (vm.stack.top > 0) {
       printf("          ");
-      for (int i = 0; i < vm.stack.top; i++) {
+      for (int i = frame->base; i < vm.stack.top; i++) {
         printf("[ ");
         printValue(vm.stack.items[i]);
         printf(" ]");
@@ -233,9 +290,28 @@ static InterpretResult run() {
     case OP_LESS:
       BINARY_OP(BOOL_VAL, <);
       break;
-    case OP_RETURN:
-      // exit interpreter
-      return INTERPRET_OK;
+    case OP_CALL: {
+      int argCount = READ_BYTE();
+      if (!callValue(stackPeek(&vm.stack, argCount), argCount)) {
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      frame = &vm.frames[vm.frameCount - 1];
+      break;
+    }
+    case OP_RETURN: {
+      Value result = stackPop(&vm.stack);
+      vm.frameCount--;
+      if (vm.frameCount == 0) {
+        stackPop(&vm.stack);
+        return INTERPRET_OK;
+      }
+
+      // put the stack pointer back to before the function call
+      vm.stack.top = frame->base;
+      stackPush(&vm.stack, result);
+      frame = &vm.frames[vm.frameCount - 1];
+      break;
+    }
     case OP_NIL:
       stackPush(&vm.stack, NIL_VAL);
       break;
@@ -266,10 +342,9 @@ InterpretResult interpret(const char *source) {
     return INTERPRET_COMPILE_ERROR;
 
   stackPush(&vm.stack, OBJ_VAL(function));
-  CallFrame *frame = &vm.frames[vm.frameCount++];
-  frame->function = function;
-  frame->ip = function->chunk.code;
-  frame->base = vm.stack.top - 1;
+  call(function, 0);
 
-  return run();
+  InterpretResult result = run();
+  resetStack(&vm.stack);
+  return result;
 }

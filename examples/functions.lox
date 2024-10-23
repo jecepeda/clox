@@ -1,0 +1,18 @@
+fun a() { 
+  print "a";
+  b(); 
+}
+fun b() { 
+  print "b";
+  c(); 
+}
+fun c() {
+  print "c";
+}
+
+fun noReturn() {
+  print "Do stuff";
+}
+
+print noReturn();
+a();

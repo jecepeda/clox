@@ -90,6 +90,8 @@ int disassembleInstruction(Chunk *chunk, int offset) {
     return byteInstruction(true, "OP_SET_LOCAL_LONG", chunk, offset);
   case OP_SET_LOCAL:
     return byteInstruction(false, "OP_SET_LOCAL", chunk, offset);
+  case OP_CALL:
+    return byteInstruction(false, "OP_CALL", chunk, offset);
   case OP_RETURN:
     return simpleInstruction("OP_RETURN", offset);
   case OP_NEGATE:

@@ -39,7 +39,7 @@ int getLine(LineArray *chunk, int offset) {
   for (int i = 0; i < chunk->count; i++) {
     for (int j = 0; j < chunk->lines[i].count; j++) {
       if (offsetCount == offset) {
-        return j == 0 ? chunk->lines[i].line : -1;
+        return chunk->lines[i].line;
       }
       offsetCount++;
     }
