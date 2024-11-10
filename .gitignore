@@ -2,7 +2,7 @@
 .cache/
 
 ### Project specific ###
-bin/
+/bin/
 build/
 .vscode/
 

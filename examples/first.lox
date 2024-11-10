@@ -1,8 +1,0 @@
-var breakfast = "beignets";
-var beverage = "coffee";
-breakfast = "beignets with " + beverage;
-
-print breakfast;
-
-// expected output:
-// beignets with coffee
