@@ -8,6 +8,8 @@
 #include <string.h>
 #include <time.h>
 
+// #include "debug.h"
+
 static void defineNative(const char *name, NativeFn function);
 
 VM vm;
@@ -121,7 +123,7 @@ static bool callValue(Value callee, int argCount) {
       break; // non-callable object type
     }
   }
-  runtimeError("Can only call functions and classes");
+  runtimeError("Can only call functions and classes.");
   return false;
 }
 

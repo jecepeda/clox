@@ -46,7 +46,7 @@ static uint32_t hashString(const char *key, int length) {
 
 static ObjString *allocateString(int length) {
   ObjString *string =
-      ALLOCATE_STR(ObjString, sizeof(ObjString) + length, OBJ_STRING);
+      ALLOCATE_STR(ObjString, sizeof(ObjString) + length + 1, OBJ_STRING);
   string->length = length;
   return string;
 }
@@ -80,9 +80,11 @@ static void printFunction(ObjFunction *function) {
 
 void printObject(Value value) {
   switch (OBJ_TYPE(value)) {
-  case OBJ_STRING:
+  case OBJ_STRING: {
+    ObjString *string = AS_STRING(value);
     printf("%s", AS_CSTRING(value));
     break;
+  }
   case OBJ_FUNCTION:
     printFunction(AS_FUNCTION(value));
     break;

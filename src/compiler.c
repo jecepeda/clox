@@ -94,8 +94,12 @@ static void initCompiler(Compiler *compiler, FunctionType type) {
 static Chunk *currentChunk() { return &current->function->chunk; }
 
 static void errorAt(Token *token, const char *message) {
+  if (parser.panicMode)
+    return;
+
   parser.panicMode = true;
-  fprintf(stderr, "c[line %d] Error", token->line);
+
+  fprintf(stderr, "[line %d] Error", token->line);
 
   if (token->type == TOKEN_EOF) {
     fprintf(stderr, " at end");
@@ -120,9 +124,8 @@ static void advance() {
 
   for (;;) {
     parser.current = scanToken();
-    if (parser.current.type != TOKEN_ERROR) {
+    if (parser.current.type != TOKEN_ERROR)
       break;
-    }
 
     errorAtCurrent(parser.current.start);
   }
@@ -581,7 +584,7 @@ static ParseRule *getRule(TokenType type) { return &rules[type]; }
 static void expression() { parsePrecedence(PREC_ASSIGNMENT); }
 
 static void varDeclaration() {
-  uint32_t global = parseVariable("Expect variable name");
+  uint32_t global = parseVariable("Expect variable name.");
 
   if (match(TOKEN_EQUAL)) {
     expression();
@@ -724,9 +727,8 @@ static void synchronize() {
       return;
     default:; // do nothing
     }
+    advance();
   }
-
-  advance();
 }
 
 static void block() {
