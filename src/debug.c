@@ -1,6 +1,7 @@
 #include "debug.h"
 #include "chunk.h"
 #include "line.h"
+#include <_types/_uint32_t.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -18,13 +19,18 @@ static int simpleInstruction(const char *name, int offset) {
   return offset + 1;
 }
 
-static int constantInstruction(bool isLong, const char *name, Chunk *chunk,
-                               int offset) {
+static uint32_t readConstant(Chunk *chunk, bool isLong, int offset) {
   uint32_t constant = chunk->code[offset + 1];
   if (isLong) {
     constant = (constant << 16) | (chunk->code[offset + 2] << 8) |
                chunk->code[offset + 3];
   }
+  return constant;
+}
+
+static int constantInstruction(bool isLong, const char *name, Chunk *chunk,
+                               int offset) {
+  uint32_t constant = readConstant(chunk, isLong, offset);
 
   printf("%-16s %4d '", name, constant);
   printValue(chunk->constants.values[constant]);
@@ -63,35 +69,43 @@ int disassembleInstruction(Chunk *chunk, int offset) {
   } else {
     printf("%4d ", line);
   }
-
+  bool isLong = false;
   uint8_t instruction = chunk->code[offset];
   switch (instruction) {
   case OP_DEFINE_GLOBAL_LONG:
-    return constantInstruction(true, "OP_DEFINE_GLOBAL_LONG", chunk, offset);
+    isLong = true;
   case OP_DEFINE_GLOBAL:
-    return constantInstruction(false, "OP_DEFINE_GLOBAL", chunk, offset);
+    return constantInstruction(
+        isLong, isLong ? "OP_DEFINE_GLOBAL_LONG" : "OP_DEFINE_GLOBAL", chunk,
+        offset);
   case OP_GET_GLOBAL_LONG:
-    return constantInstruction(true, "OP_GET_GLOBAL_LONG", chunk, offset);
+    isLong = true;
   case OP_GET_GLOBAL:
-    return constantInstruction(false, "OP_GET_GLOBAL", chunk, offset);
+    return constantInstruction(
+        isLong, isLong ? "OP_GET_GLOBAL_LONG" : "OP_GET_GLOBAL", chunk, offset);
   case OP_SET_GLOBAL_LONG:
-    return constantInstruction(true, "OP_SET_GLOBAL_LONG", chunk, offset);
+    isLong = true;
   case OP_SET_GLOBAL:
-    return constantInstruction(false, "OP_SET_GLOBAL", chunk, offset);
+    return constantInstruction(
+        isLong, isLong ? "OP_SET_GLOBAL_LONG" : "OP_SET_GLOBAL", chunk, offset);
   case OP_CONSTANT_LONG:
-    return constantInstruction(true, "OP_CONSTANT_LONG", chunk, offset);
+    isLong = true;
   case OP_CONSTANT:
-    return constantInstruction(false, "OP_CONSTANT", chunk, offset);
+    return constantInstruction(
+        isLong, isLong ? "OP_CONSTANT_LONG" : "OP_CONSTANT", chunk, offset);
   case OP_GET_LOCAL_LONG:
-    return byteInstruction(true, "OP_GET_LOCAL_LONG", chunk, offset);
+    isLong = true;
   case OP_GET_LOCAL:
-    return byteInstruction(false, "OP_GET_LOCAL", chunk, offset);
+    return byteInstruction(
+        isLong, isLong ? "OP_GET_LOCAL_LONG" : "OP_GET_LOCAL", chunk, offset);
   case OP_SET_LOCAL_LONG:
-    return byteInstruction(true, "OP_SET_LOCAL_LONG", chunk, offset);
+    isLong = true;
   case OP_SET_LOCAL:
-    return byteInstruction(false, "OP_SET_LOCAL", chunk, offset);
+    return byteInstruction(
+        isLong, isLong ? "OP_SET_LOCAL_LONG" : "OP_SET_LOCAL", chunk, offset);
   case OP_CALL:
-    return byteInstruction(false, "OP_CALL", chunk, offset);
+    return byteInstruction(isLong, isLong ? "OP_CALL_LONG" : "OP_CALL", chunk,
+                           offset);
   case OP_RETURN:
     return simpleInstruction("OP_RETURN", offset);
   case OP_NEGATE:
@@ -128,6 +142,16 @@ int disassembleInstruction(Chunk *chunk, int offset) {
     return jumpInstruction("OP_JUMP_IF_FALSE", 1, chunk, offset);
   case OP_LOOP:
     return jumpInstruction("OP_LOOP", -1, chunk, offset);
+  case OP_CLOSURE_LONG:
+    isLong = true;
+  case OP_CLOSURE: {
+    offset++;
+    uint32_t constant = readConstant(chunk, isLong, offset);
+    printf("%-16s %4d ", isLong ? "OP_CLOSURE_LONG" : "OP_CLOSURE", constant);
+    printValue(chunk->constants.values[constant]);
+    printf("\n");
+    return offset;
+  }
   default:
     printf("Unknown opcode %d\n", instruction);
     return offset + 1;

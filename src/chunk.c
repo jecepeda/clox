@@ -33,15 +33,16 @@ uint32_t makeConstant(Chunk *chunk, Value value) {
   return chunk->constants.count - 1;
 }
 
-void writeConstant(Chunk *chunk, Value value, int line) {
+void writeConstant(Chunk *chunk, OpCode code, Value value, int line) {
   uint32_t size = chunk->constants.count;
   if (size >= 256u) {
-    writeChunk(chunk, OP_CONSTANT_LONG, line);
+    code++;
+    writeChunk(chunk, code, line);
     writeValueArray(&chunk->constants, value);
     WRITE_CHUNK_LONG(chunk, size, line);
     return;
   }
-  writeChunk(chunk, OP_CONSTANT, line);
-  writeChunk(chunk, size, line);
   writeValueArray(&chunk->constants, value);
+  writeChunk(chunk, code, line);
+  writeChunk(chunk, size, line);
 }

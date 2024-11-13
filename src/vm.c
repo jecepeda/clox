@@ -1,7 +1,10 @@
 #include "vm.h"
+#include "chunk.h"
 #include "compiler.h"
 #include "memory.h"
 #include "object.h"
+#include "stack.h"
+#include "value.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -53,9 +56,9 @@ static void runtimeError(const char *format, ...) {
 
   for (int i = vm.frameCount - 1; i >= 0; i--) {
     CallFrame *frame = &vm.frames[i];
-    ObjFunction *function = frame->function;
+    ObjFunction *function = frame->closure->function;
     int instruction = frame->ip - function->chunk.code - 1;
-    int line = getLine(&frame->function->chunk.lines, instruction);
+    int line = getLine(&frame->closure->function->chunk.lines, instruction);
     fprintf(stderr, "[line %d] in ", line);
     if (function->name == NULL) {
       fprintf(stderr, "script\n");
@@ -90,9 +93,9 @@ static void concatenate() {
   stackPush(&vm.stack, OBJ_VAL(result));
 }
 
-static bool call(ObjFunction *function, int argCount) {
-  if (argCount != function->arity) {
-    runtimeError("Expected %d arguments but got %d.", function->arity,
+static bool call(ObjClosure *closure, int argCount) {
+  if (argCount != closure->function->arity) {
+    runtimeError("Expected %d arguments but got %d.", closure->function->arity,
                  argCount);
     return false;
   }
@@ -101,8 +104,8 @@ static bool call(ObjFunction *function, int argCount) {
     return false;
   }
   CallFrame *frame = &vm.frames[vm.frameCount++];
-  frame->function = function;
-  frame->ip = function->chunk.code;
+  frame->closure = closure;
+  frame->ip = closure->function->chunk.code;
   frame->base = vm.stack.top - argCount - 1;
   return true;
 }
@@ -110,8 +113,8 @@ static bool call(ObjFunction *function, int argCount) {
 static bool callValue(Value callee, int argCount) {
   if (IS_OBJ(callee)) {
     switch (OBJ_TYPE(callee)) {
-    case OBJ_FUNCTION:
-      return call(AS_FUNCTION(callee), argCount);
+    case OBJ_CLOSURE:
+      return call(AS_CLOSURE(callee), argCount);
     case OBJ_NATIVE: {
       NativeFn native = AS_NATIVE(callee);
       Value result = native(argCount, &vm.stack.items[vm.stack.top - argCount]);
@@ -142,7 +145,7 @@ static InterpretResult run() {
     stackPush(&vm.stack, valueType(a op b));                                   \
   } while (false)
 #define READ_CONSTANT(isLong)                                                  \
-  (frame->function->chunk.constants                                            \
+  (frame->closure->function->chunk.constants                                   \
        .values[isLong ? ((READ_BYTE() << 16) | (READ_BYTE() << 8) |            \
                          (READ_BYTE()))                                        \
                       : READ_BYTE()])
@@ -163,8 +166,9 @@ static InterpretResult run() {
       }
       printf("\n");
     }
-    disassembleInstruction(&frame->function->chunk,
-                           (int)(frame->ip - frame->function->chunk.code));
+    disassembleInstruction(
+        &frame->closure->function->chunk,
+        (int)(frame->ip - frame->closure->function->chunk.code));
 #endif
     uint8_t instruction;
     bool isLong = false;
@@ -323,6 +327,14 @@ static InterpretResult run() {
     case OP_FALSE:
       stackPush(&vm.stack, BOOL_VAL(false));
       break;
+    case OP_CLOSURE_LONG:
+      isLong = true; // don't break, fall through
+    case OP_CLOSURE: {
+      ObjFunction *function = AS_FUNCTION(READ_CONSTANT(isLong));
+      ObjClosure *closure = newClosure(function);
+      stackPush(&vm.stack, OBJ_VAL(closure));
+      break;
+    }
     default: {
       printf("Unknown opcode %d\n", instruction);
       return INTERPRET_RUNTIME_ERROR;
@@ -344,7 +356,10 @@ InterpretResult interpret(const char *source) {
     return INTERPRET_COMPILE_ERROR;
 
   stackPush(&vm.stack, OBJ_VAL(function));
-  call(function, 0);
+  ObjClosure *closure = newClosure(function);
+  stackPop(&vm.stack);
+  stackPush(&vm.stack, OBJ_VAL(closure));
+  call(closure, 0);
 
   InterpretResult result = run();
   resetStack(&vm.stack);

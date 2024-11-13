@@ -48,7 +48,7 @@ typedef enum {
   TYPE_SCRIPT,
 } FunctionType;
 
-typedef struct {
+typedef struct Compiler {
   struct Compiler *enclosing;
 
   ObjFunction *function;
@@ -67,7 +67,7 @@ Compiler *current = NULL;
 static void growLocalArray();
 
 static void initCompiler(Compiler *compiler, FunctionType type) {
-  compiler->enclosing = (struct Compiler *)current;
+  compiler->enclosing = current;
   compiler->function = NULL;
   compiler->type = type;
 
@@ -194,7 +194,7 @@ static ObjFunction *endCompiler() {
                                          : "<script>");
   }
 #endif
-  current = (Compiler *)current->enclosing;
+  current = current->enclosing;
   return function;
 }
 
@@ -360,7 +360,7 @@ static void or_(bool canAssign) {
 }
 
 static void emitConstant(Value value) {
-  writeConstant(currentChunk(), value, parser.previous.line);
+  writeConstant(currentChunk(), OP_CONSTANT, value, parser.previous.line);
 }
 
 static void number(bool canAssign) {
@@ -761,7 +761,7 @@ static void function(FunctionType type) {
   block();
 
   ObjFunction *function = endCompiler();
-  writeConstant(currentChunk(), OBJ_VAL(function), line);
+  writeConstant(currentChunk(), OP_CLOSURE, OBJ_VAL(function), line);
 }
 
 static void funDeclaration() {

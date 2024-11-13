@@ -15,7 +15,7 @@ typedef enum {
 } InterpretResult;
 
 typedef struct {
-  ObjFunction *function;
+  ObjClosure *closure;
   uint8_t *ip;
   int base;
 } CallFrame;

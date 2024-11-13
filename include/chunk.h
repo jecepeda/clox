@@ -19,21 +19,22 @@
   } while (false)
 
 typedef enum {
-  // constants
-  OP_CONSTANT,      // 2 bytes (code, operand)
-  OP_CONSTANT_LONG, // 4 bytes (1 code, 3 operand)
-  // globals
+  OP_CONSTANT,           // 2 bytes (code, operand)
+  OP_CONSTANT_LONG,      // 4 bytes (1 code, 3 operand)
+                         // globals
   OP_DEFINE_GLOBAL,      // 2 bytes (code, operand)
   OP_DEFINE_GLOBAL_LONG, // 4 bytes (1 code, 3 operand)
   OP_SET_GLOBAL,         // 2 bytes (code, operand)
   OP_SET_GLOBAL_LONG,    // 4 bytes (1 code, 3 operand)
   OP_GET_GLOBAL,         // 2 bytes (code, operand)
   OP_GET_GLOBAL_LONG,    // 4 bytes (1 code, 3 operand)
-  // locals
-  OP_GET_LOCAL,      // 2 bytes (code, operand)
-  OP_GET_LOCAL_LONG, // 4 bytes (1 code, 3 operand)
-  OP_SET_LOCAL,      // 2 bytes (code, operand)
-  OP_SET_LOCAL_LONG, // 4 bytes (1 code, 3 operand)
+                         // locals
+  OP_GET_LOCAL,          // 2 bytes (code, operand)
+  OP_GET_LOCAL_LONG,     // 4 bytes (1 code, 3 operand)
+  OP_SET_LOCAL,          // 2 bytes (code, operand)
+  OP_SET_LOCAL_LONG,     // 4 bytes (1 code, 3 operand)
+  OP_CLOSURE,            // 2 bytes (code, operand)
+  OP_CLOSURE_LONG,       // 4 bytes (1 code, 3 operand)
   // operators, etc
   OP_NIL,
   OP_TRUE,
@@ -71,6 +72,6 @@ void freeChunk(Chunk *chunk);
 // make constant saves a variable to the chunk
 uint32_t makeConstant(Chunk *chunk, Value value);
 // write constant writes a constant to the chunk alongside OP_CONSTANT
-void writeConstant(Chunk *chunk, Value value, int line);
+void writeConstant(Chunk *chunk, OpCode code, Value value, int line);
 
 #endif
