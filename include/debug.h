@@ -2,6 +2,7 @@
 #define clox_debug_h
 
 #include "chunk.h"
+#include "object.h"
 
 #define DEBUG_TRACE_EXECUTION
 #define DEBUG_PRINT_CODE

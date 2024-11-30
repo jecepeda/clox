@@ -1,7 +1,7 @@
 #include "debug.h"
 #include "chunk.h"
 #include "line.h"
-#include <_types/_uint32_t.h>
+
 #include <stdint.h>
 #include <stdio.h>
 
@@ -88,6 +88,18 @@ int disassembleInstruction(Chunk *chunk, int offset) {
   case OP_SET_GLOBAL:
     return constantInstruction(
         isLong, isLong ? "OP_SET_GLOBAL_LONG" : "OP_SET_GLOBAL", chunk, offset);
+  case OP_GET_UPVALUE_LONG:
+    isLong = true;
+  case OP_GET_UPVALUE:
+    return byteInstruction(isLong,
+                           isLong ? "OP_GET_UPVALUE_LONG" : "OP_GET_UPVALUE",
+                           chunk, offset);
+  case OP_SET_UPVALUE_LONG:
+    isLong = true;
+  case OP_SET_UPVALUE:
+    return byteInstruction(isLong,
+                           isLong ? "OP_SET_UPVALUE_LONG" : "OP_SET_UPVALUE",
+                           chunk, offset);
   case OP_CONSTANT_LONG:
     isLong = true;
   case OP_CONSTANT:
@@ -142,14 +154,25 @@ int disassembleInstruction(Chunk *chunk, int offset) {
     return jumpInstruction("OP_JUMP_IF_FALSE", 1, chunk, offset);
   case OP_LOOP:
     return jumpInstruction("OP_LOOP", -1, chunk, offset);
+  case OP_CLOSE_UPVALUE:
+    return simpleInstruction("OP_CLOSE_UPVALUE", offset);
   case OP_CLOSURE_LONG:
     isLong = true;
   case OP_CLOSURE: {
-    offset++;
     uint32_t constant = readConstant(chunk, isLong, offset);
     printf("%-16s %4d ", isLong ? "OP_CLOSURE_LONG" : "OP_CLOSURE", constant);
     printValue(chunk->constants.values[constant]);
     printf("\n");
+    offset += isLong ? 4 : 2;
+
+    ObjFunction *function = AS_FUNCTION(chunk->constants.values[constant]);
+    for (int j = 0; j < function->upvalueCount; j++) {
+      int isLocal = chunk->code[offset];
+      int index = readConstant(chunk, true, offset);
+      offset += 4;
+      printf("%04d      |                     %s %d\n", offset - 4,
+             isLocal ? "local" : "upvalue", index);
+    }
     return offset;
   }
   default:

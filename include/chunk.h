@@ -35,7 +35,12 @@ typedef enum {
   OP_SET_LOCAL_LONG,     // 4 bytes (1 code, 3 operand)
   OP_CLOSURE,            // 2 bytes (code, operand)
   OP_CLOSURE_LONG,       // 4 bytes (1 code, 3 operand)
-  // operators, etc
+  OP_GET_UPVALUE,        // 2 bytes (code, operand) get upvalue from the current
+  OP_GET_UPVALUE_LONG,   // 4 bytes (1 code, 3 operand)
+  OP_SET_UPVALUE,        // 2 bytes (code, operand) get upvalue from the current
+  OP_SET_UPVALUE_LONG,   // 4 bytes (1 code, 3 operand)
+  OP_CLOSE_UPVALUE,      // close upvalue, 1 byte (code)
+                         // operators, etc
   OP_NIL,
   OP_TRUE,
   OP_FALSE,

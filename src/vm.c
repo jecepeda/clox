@@ -26,6 +26,7 @@ void initVM() {
   initTable(&vm.strings);
   initTable(&vm.globals);
   defineNative("clock", clockNative);
+  vm.openUpvalues = NULL;
   vm.objects = NULL;
 }
 
@@ -41,6 +42,7 @@ void freeVM() {
     freeStack(&vm.stack);
   }
   vm.frameCount = 0;
+  vm.openUpvalues = NULL;
 }
 
 static bool isFalsey(Value value) {
@@ -130,6 +132,38 @@ static bool callValue(Value callee, int argCount) {
   return false;
 }
 
+static ObjUpvalue *captureUpvalue(int local) {
+  ObjUpvalue *prevUpvalue = NULL;
+  ObjUpvalue *upvalue = vm.openUpvalues;
+  while (upvalue != NULL && upvalue->location > local) {
+    prevUpvalue = upvalue;
+    upvalue = upvalue->next;
+  }
+
+  if (upvalue != NULL && upvalue->location == local) {
+    return upvalue;
+  }
+
+  ObjUpvalue *createdUpvalue = newUpvalue(local);
+  createdUpvalue->next = upvalue;
+
+  if (prevUpvalue == NULL) {
+    vm.openUpvalues = createdUpvalue;
+  } else {
+    prevUpvalue->next = createdUpvalue;
+  }
+  return createdUpvalue;
+}
+
+static void closeUpvalues(int last) {
+  while (vm.openUpvalues != NULL && vm.openUpvalues->location >= last) {
+    ObjUpvalue *upvalue = vm.openUpvalues;
+    upvalue->closed = vm.stack.items[upvalue->location];
+    upvalue->location = -1;
+    vm.openUpvalues = upvalue->next;
+  }
+}
+
 static InterpretResult run() {
   CallFrame *frame = &vm.frames[vm.frameCount - 1];
 #define READ_BYTE() (*frame->ip++)
@@ -157,9 +191,10 @@ static InterpretResult run() {
 #define READ_STRING(isLong) AS_STRING(READ_CONSTANT(isLong))
   for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
+    printf("--------------------------\n");
     if (vm.stack.top > 0) {
       printf("          ");
-      for (int i = frame->base; i < vm.stack.top; i++) {
+      for (int i = 0; i < vm.stack.top; i++) {
         printf("[ ");
         printValue(vm.stack.items[i]);
         printf(" ]");
@@ -242,12 +277,36 @@ static InterpretResult run() {
     case OP_POP:
       stackPop(&vm.stack);
       break;
+    case OP_SET_UPVALUE_LONG:
+      isLong = true; // don't break, fall through
+    case OP_SET_UPVALUE: {
+      uint32_t slot = READ_SLOT(isLong);
+      int pos = frame->closure->upvalues[slot]->location;
+      if (pos == -1) {
+        frame->closure->upvalues[slot]->closed = stackPeek(&vm.stack, 0);
+      } else {
+        vm.stack.items[pos] = stackPeek(&vm.stack, 0);
+      }
+      break;
+    }
     case OP_DEFINE_GLOBAL_LONG:
       isLong = true; // don't break, fall through
     case OP_DEFINE_GLOBAL: {
       ObjString *name = READ_STRING(isLong);
       tableSet(&vm.globals, name, stackPeek(&vm.stack, 0));
       stackPop(&vm.stack);
+      break;
+    }
+    case OP_GET_UPVALUE_LONG:
+      isLong = true; // don't break, fall through
+    case OP_GET_UPVALUE: {
+      uint32_t slot = READ_SLOT(isLong);
+      int pos = frame->closure->upvalues[slot]->location;
+      if (pos == -1) {
+        stackPush(&vm.stack, frame->closure->upvalues[slot]->closed);
+      } else {
+        stackPush(&vm.stack, vm.stack.items[pos]);
+      }
       break;
     }
     case OP_GET_GLOBAL_LONG:
@@ -304,8 +363,13 @@ static InterpretResult run() {
       frame = &vm.frames[vm.frameCount - 1];
       break;
     }
+    case OP_CLOSE_UPVALUE:
+      closeUpvalues(vm.stack.top - 1);
+      stackPop(&vm.stack);
+      break;
     case OP_RETURN: {
       Value result = stackPop(&vm.stack);
+      closeUpvalues(frame->base);
       vm.frameCount--;
       if (vm.frameCount == 0) {
         stackPop(&vm.stack);
@@ -332,6 +396,18 @@ static InterpretResult run() {
     case OP_CLOSURE: {
       ObjFunction *function = AS_FUNCTION(READ_CONSTANT(isLong));
       ObjClosure *closure = newClosure(function);
+      int count = closure->upvalueCount;
+      for (int i = 0; i < closure->upvalueCount; i++) {
+        uint8_t isLocal = READ_BYTE();
+        uint32_t index = READ_SLOT(true);
+        if (isLocal) {
+          int pos = frame->base + index;
+          closure->upvalues[i] = captureUpvalue(pos);
+        } else {
+          ObjUpvalue *upValue = frame->closure->upvalues[index];
+          closure->upvalues[i] = upValue;
+        }
+      }
       stackPush(&vm.stack, OBJ_VAL(closure));
       break;
     }

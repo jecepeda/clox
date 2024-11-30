@@ -1,7 +1,9 @@
 #include "compiler.h"
+#include "chunk.h"
 #include "memory.h"
 #include "scanner.h"
 
+#include <_types/_uint32_t.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,7 +43,13 @@ typedef struct {
 typedef struct {
   Token name;
   int depth;
+  bool isCaptured;
 } Local;
+
+typedef struct {
+  uint32_t index;
+  bool isLocal;
+} Upvalue;
 
 typedef enum {
   TYPE_FUNCTION,
@@ -54,6 +62,7 @@ typedef struct Compiler {
   ObjFunction *function;
   FunctionType type;
 
+  Upvalue upvalues[UINT8_COUNT];
   Table identifiers;
   uint32_t localCount;
   uint32_t localCapacity;
@@ -87,6 +96,7 @@ static void initCompiler(Compiler *compiler, FunctionType type) {
   growLocalArray();
   Local *local = &current->locals[current->localCount++];
   local->depth = 0;
+  local->isCaptured = false;
   local->name.start = "";
   local->name.length = 0;
 }
@@ -204,7 +214,11 @@ static void endScope() {
   current->scopeDepth--;
   while (current->localCount > 0 &&
          current->locals[current->localCount - 1].depth > current->scopeDepth) {
-    emitByte(OP_POP);
+    if (current->locals[current->localCount - 1].isCaptured) {
+      emitByte(OP_CLOSE_UPVALUE);
+    } else {
+      emitByte(OP_POP);
+    }
     current->localCount--;
   }
 }
@@ -232,7 +246,7 @@ static bool identifiersEqual(Token *a, Token *b) {
   return memcmp(a->start, b->start, a->length) == 0;
 }
 
-static uint32_t resolveLocal(Compiler *compiler, Token *name) {
+static int resolveLocal(Compiler *compiler, Token *name) {
   for (int i = compiler->localCount - 1; i >= 0; i--) {
     Local *local = &compiler->locals[i];
     if (identifiersEqual(name, &local->name)) {
@@ -246,6 +260,42 @@ static uint32_t resolveLocal(Compiler *compiler, Token *name) {
   return -1; // no local variable found
 }
 
+static int addUpvalue(Compiler *compiler, uint32_t index, bool isLocal) {
+  int upvalueCount = compiler->function->upvalueCount;
+  for (int i = 0; i < upvalueCount; i++) {
+    Upvalue *upvalue = &compiler->upvalues[i];
+    if (upvalue->index == index && upvalue->isLocal == isLocal) {
+      return i;
+    }
+  }
+  if (upvalueCount == UINT8_COUNT) {
+    error("Too many closure variables in function.");
+    return 0;
+  }
+  compiler->upvalues[upvalueCount].isLocal = isLocal;
+  compiler->upvalues[upvalueCount].index = index;
+  return compiler->function->upvalueCount++;
+}
+
+static int resolveUpvalue(Compiler *compiler, Token *name) {
+  if (compiler->enclosing == NULL) {
+    return -1;
+  }
+
+  int localIdx = resolveLocal(compiler->enclosing, name);
+  if (localIdx != -1) {
+    compiler->enclosing->locals[localIdx].isCaptured = true;
+    return addUpvalue(compiler, (uint32_t)localIdx, true);
+  }
+
+  int upvalue = resolveUpvalue(compiler->enclosing, name);
+  if (upvalue != -1) {
+    return addUpvalue(compiler, (uint32_t)upvalue, false);
+  }
+
+  return -1;
+}
+
 static void growLocalArray() {
   int oldCapacity = current->localCapacity;
   current->localCapacity = GROW_CAPACITY(current->localCapacity);
@@ -257,7 +307,7 @@ static void addLocal(Token name) {
   if (current->localCount >= current->localCapacity) {
     growLocalArray();
   }
-  current->locals[current->localCount++] = (Local){name, -1};
+  current->locals[current->localCount++] = (Local){name, -1, false};
 }
 
 static void declareVariable() {
@@ -414,10 +464,28 @@ static void handleGlobal(Token name, bool canAssign) {
   emitBytes(operation, arg);
 }
 
+static void handleUpvalue(bool canAssign, uint32_t arg) {
+  OpCode operation;
+  if (canAssign && match(TOKEN_EQUAL)) {
+    expression();
+    operation = OP_SET_UPVALUE;
+  } else {
+    operation = OP_GET_UPVALUE;
+  }
+  if (arg >= 256u) {
+    emitByte(++operation);
+    WRITE_CHUNK_LONG(currentChunk(), arg, parser.previous.line);
+    return;
+  }
+  emitBytes(operation, arg);
+}
+
 static void namedVariable(Token name, bool canAssign) {
   uint32_t arg = resolveLocal(current, &name);
   if (arg != -1) {
     handleLocal(canAssign, arg); // local names are not saved
+  } else if ((arg = resolveUpvalue(current, &name)) != -1) {
+    handleUpvalue(canAssign, arg);
   } else {
     handleGlobal(name, canAssign);
   }
@@ -762,6 +830,13 @@ static void function(FunctionType type) {
 
   ObjFunction *function = endCompiler();
   writeConstant(currentChunk(), OP_CLOSURE, OBJ_VAL(function), line);
+
+  for (int i = 0; i < function->upvalueCount; i++) {
+    emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
+    // we write three bytes as that is the maximum length of the chunk
+    // and I don't want to handle variable sizes here as of now
+    WRITE_CHUNK_LONG(currentChunk(), compiler.upvalues[i].index, line);
+  }
 }
 
 static void funDeclaration() {

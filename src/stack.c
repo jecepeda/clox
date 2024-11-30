@@ -1,5 +1,6 @@
 #include "stack.h"
 #include "memory.h"
+#include <stdio.h>
 
 void stackPush(Stack *stack, Value value) {
   if (stack->capacity <= stack->top) {

@@ -145,9 +145,9 @@ func main() {
 			"test/while/return_closure.lox":     suite.Skip,
 		}.Copy(earlyChapters).Copy(noClasses)),
 
-		// "chap25_closures": suite.NewSuite(Filemap{
-		// 	"test": suite.Pass,
-		// }.Copy(earlyChapters).Copy(noCClasses)),
+		"chap25_closures": suite.NewSuite(Filemap{
+			"test": suite.Pass,
+		}.Copy(earlyChapters).Copy(noClasses)),
 
 		// "chap26_garbage": suite.NewSuite(Filemap{
 		// 	"test": suite.Pass,

@@ -45,6 +45,8 @@ void printValue(Value value) {
   case VAL_OBJ:
     printObject(value);
     break;
+  default:
+    printf("Unknown value type %d\n", value.type);
   }
 }
 
