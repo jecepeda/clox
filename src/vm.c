@@ -11,7 +11,9 @@
 #include <string.h>
 #include <time.h>
 
-// #include "debug.h"
+#ifdef DEBUG_TRACE_EXECUTION
+#include "debug.h"
+#endif
 
 static void defineNative(const char *name, NativeFn function);
 
@@ -28,6 +30,13 @@ void initVM() {
   defineNative("clock", clockNative);
   vm.openUpvalues = NULL;
   vm.objects = NULL;
+  vm.bytesAllocated = 0;
+  vm.nextGC = 1024 * 1024;
+
+  // GC
+  vm.grayCount = 0;
+  vm.grayCapacity = 0;
+  vm.grayStack = NULL;
 }
 
 void freeVM() {
@@ -82,8 +91,8 @@ static void defineNative(const char *name, NativeFn function) {
 }
 
 static void concatenate() {
-  ObjString *b = AS_STRING(stackPop(&vm.stack));
-  ObjString *a = AS_STRING(stackPop(&vm.stack));
+  ObjString *b = AS_STRING(stackPeek(&vm.stack, 0));
+  ObjString *a = AS_STRING(stackPeek(&vm.stack, 1));
 
   int length = a->length + b->length;
   ObjString *result = createString(length);
@@ -91,6 +100,8 @@ static void concatenate() {
   memcpy(result->chars, a->chars, a->length);
   memcpy(result->chars + a->length, b->chars, b->length);
   result->chars[length] = '\0';
+  stackPop(&vm.stack);
+  stackPop(&vm.stack);
 
   stackPush(&vm.stack, OBJ_VAL(result));
 }

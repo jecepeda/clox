@@ -1,5 +1,7 @@
 #include "chunk.h"
 #include "memory.h"
+#include "stack.h"
+#include "vm.h"
 
 void initChunk(Chunk *chunk) {
   chunk->code = NULL;
@@ -29,11 +31,15 @@ void freeChunk(Chunk *chunk) {
 }
 
 uint32_t makeConstant(Chunk *chunk, Value value) {
+  stackPush(&vm.stack, value);
   writeValueArray(&chunk->constants, value);
   return chunk->constants.count - 1;
+  stackPop(&vm.stack);
 }
 
 void writeConstant(Chunk *chunk, OpCode code, Value value, int line) {
+  stackPush(&vm.stack, value);
+
   uint32_t size = chunk->constants.count;
   if (size >= 256u) {
     code++;
@@ -45,4 +51,5 @@ void writeConstant(Chunk *chunk, OpCode code, Value value, int line) {
   writeValueArray(&chunk->constants, value);
   writeChunk(chunk, code, line);
   writeChunk(chunk, size, line);
+  stackPop(&vm.stack);
 }

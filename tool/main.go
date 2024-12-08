@@ -149,9 +149,9 @@ func main() {
 			"test": suite.Pass,
 		}.Copy(earlyChapters).Copy(noClasses)),
 
-		// "chap26_garbage": suite.NewSuite(Filemap{
-		// 	"test": suite.Pass,
-		// }.Copy(earlyChapters).Copy(noCClasses)),
+		"chap26_garbage": suite.NewSuite(Filemap{
+			"test": suite.Pass,
+		}.Copy(earlyChapters).Copy(noClasses)),
 
 		// "chap27_classes": suite.NewSuite(Filemap{
 		// 	"test": suite.Pass,

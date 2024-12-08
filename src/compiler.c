@@ -3,13 +3,13 @@
 #include "memory.h"
 #include "scanner.h"
 
-#include <_types/_uint32_t.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-// #include "debug.h"
+#ifdef DEBUG_PRINT_CODE
+#include "debug.h"
+#endif
 
 typedef void (*ParseFn)(bool canAssign);
 
@@ -896,4 +896,12 @@ ObjFunction *compile(const char *source) {
   }
   ObjFunction *function = endCompiler();
   return parser.hadError ? NULL : function;
+}
+
+void markCompilerRoots() {
+  Compiler *compiler = current;
+  while (compiler != NULL) {
+    markObject((Obj *)compiler->function);
+    compiler = compiler->enclosing;
+  }
 }

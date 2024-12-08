@@ -3,6 +3,7 @@
 
 #include "memory.h"
 #include "object.h"
+#include "stack.h"
 #include "table.h"
 #include "value.h"
 #include "vm.h"
@@ -14,10 +15,16 @@
   (type *)allocateObject(totalSize, objectType)
 
 static Obj *allocateObject(size_t size, ObjType type) {
-  Obj *object = (Obj *)reallocate(NULL, 0, size);
+  Obj *object = (Obj *)reallocate(NULL, 0, size, true);
   object->type = type;
   object->next = vm.objects;
+  object->isMarked = false;
   vm.objects = object;
+
+#ifdef DEBUG_LOG_GC
+  printf("%p allocate %zu for %d\n", (void *)object, size, type);
+#endif
+
   return object;
 }
 
@@ -89,7 +96,9 @@ ObjString *copyString(const char *chars, int length) {
   string->hash = hash;
   string->chars[length] = '\0';
   // we add the string to the hash table
+  stackPush(&vm.stack, OBJ_VAL(string));
   tableSet(&vm.strings, string, NIL_VAL);
+  stackPop(&vm.stack);
   return string;
 }
 

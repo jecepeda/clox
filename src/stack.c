@@ -6,8 +6,10 @@ void stackPush(Stack *stack, Value value) {
   if (stack->capacity <= stack->top) {
     int oldCapacity = stack->capacity;
     stack->capacity = GROW_CAPACITY(oldCapacity);
+    // triggering the gc here would result in unexpected behavior
+    // as we depend on the stack to track objects for gc cleanup
     stack->items =
-        GROW_ARRAY(Value, stack->items, oldCapacity, stack->capacity);
+        GROW_ARRAY_NO_GC(Value, stack->items, oldCapacity, stack->capacity);
   }
   stack->items[stack->top] = value;
   stack->top++;
