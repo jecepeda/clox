@@ -65,6 +65,11 @@ typedef enum {
   OP_METHOD_LONG,
   OP_INVOKE,
   OP_INVOKE_LONG,
+  OP_SUPER_INVOKE,
+  OP_SUPER_INVOKE_LONG,
+  OP_GET_SUPER,
+  OP_GET_SUPER_LONG,
+  OP_INHERIT,
   // operators, etc
   OP_NIL,
   OP_TRUE,

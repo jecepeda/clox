@@ -412,6 +412,40 @@ static InterpretResult run() {
       }
       break;
     }
+    case OP_INHERIT: {
+      Value superclass = stackPeek(&vm.stack, 1);
+      if (!IS_CLASS(superclass)) {
+        runtimeError("Superclass must be a class.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      ObjClass *subclass = AS_CLASS(stackPeek(&vm.stack, 0));
+      tableAddAll(&AS_CLASS(superclass)->methods, &subclass->methods);
+      stackPop(&vm.stack); // Subclass.
+      break;
+    }
+    case OP_GET_SUPER_LONG:
+      isLong = true;
+    case OP_GET_SUPER: {
+      ObjString *name = READ_STRING(isLong);
+      ObjClass *superclass = AS_CLASS(stackPop(&vm.stack));
+
+      if (!bindMethod(superclass, name)) {
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      break;
+    }
+    case OP_SUPER_INVOKE_LONG:
+      isLong = true;
+    case OP_SUPER_INVOKE: {
+      ObjString *method = READ_STRING(isLong);
+      int argCount = READ_BYTE();
+      ObjClass *superclass = AS_CLASS(stackPop(&vm.stack));
+      if (!invokeFromClass(superclass, method, argCount)) {
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      frame = &vm.frames[vm.frameCount - 1];
+      break;
+    }
     case OP_JUMP: {
       uint16_t offset = READ_SHORT();
       frame->ip += offset;

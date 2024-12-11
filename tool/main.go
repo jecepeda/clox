@@ -177,9 +177,9 @@ func main() {
 			"test": suite.Pass,
 		}.Copy(earlyChapters).Copy(noInheritance)),
 
-		// "chap29_superclasses": suite.NewSuite(Filemap{
-		// 	"test": suite.Pass,
-		// }.Copy(earlyChapters)),
+		"chap29_superclasses": suite.NewSuite(Filemap{
+			"test": suite.Pass,
+		}.Copy(earlyChapters)),
 
 		// "chap30_optimization": suite.NewSuite(Filemap{
 		// 	"test": suite.Pass,

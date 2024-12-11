@@ -152,6 +152,19 @@ int disassembleInstruction(Chunk *chunk, int offset) {
   case OP_INVOKE:
     return invokeInstruction(isLong, isLong ? "OP_INVOKE_LONG" : "OP_INVOKE",
                              chunk, offset);
+  case OP_SUPER_INVOKE_LONG:
+    isLong = true;
+  case OP_SUPER_INVOKE:
+    return invokeInstruction(
+        isLong, isLong ? "OP_SUPER_INVOKE_LONG" : "OP_SUPER_INVOKE", chunk,
+        offset);
+  case OP_GET_SUPER_LONG:
+    isLong = true;
+  case OP_GET_SUPER:
+    return constantInstruction(
+        isLong, isLong ? "OP_GET_SUPER_LONG" : "OP_GET_SUPER", chunk, offset);
+  case OP_INHERIT:
+    return simpleInstruction("OP_INHERIT", offset);
   case OP_RETURN:
     return simpleInstruction("OP_RETURN", offset);
   case OP_NEGATE:
