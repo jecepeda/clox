@@ -27,6 +27,7 @@ typedef struct {
   Stack stack;
   Obj *objects;
   Table strings;
+  ObjString *initString;
   Table globals;
   ObjUpvalue *openUpvalues;
 

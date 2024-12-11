@@ -45,7 +45,7 @@ void writeConstant(Chunk *chunk, OpCode code, Value value, int line) {
     code++;
     writeChunk(chunk, code, line);
     writeValueArray(&chunk->constants, value);
-    WRITE_CHUNK_LONG(chunk, size, line);
+    WRITE_LONG_CHUNK(chunk, size, line);
     return;
   }
   writeValueArray(&chunk->constants, value);

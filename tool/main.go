@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"log/slog"
 	"slices"
 
@@ -172,9 +173,9 @@ func main() {
 			"test/variable/local_from_method.lox":          suite.Skip,
 		}.Copy(earlyChapters).Copy(noInheritance)),
 
-		// "chap28_methods": suite.NewSuite(Filemap{
-		// 	"test": suite.Pass,
-		// }.Copy(earlyChapters).Copy(noCInheritance)),
+		"chap28_methods": suite.NewSuite(Filemap{
+			"test": suite.Pass,
+		}.Copy(earlyChapters).Copy(noInheritance)),
 
 		// "chap29_superclasses": suite.NewSuite(Filemap{
 		// 	"test": suite.Pass,
@@ -195,7 +196,7 @@ func main() {
 	for _, k := range keys {
 		fmt.Printf("Running suite %s\n", k)
 		if err := suites[k].Run(); err != nil {
-			fmt.Printf("Error running suite %s: %v\n", k, err)
+			log.Fatalf("Error running suite %s: %v\n", k, err)
 		}
 	}
 }

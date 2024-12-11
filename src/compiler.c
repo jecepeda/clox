@@ -54,6 +54,8 @@ typedef struct {
 typedef enum {
   TYPE_FUNCTION,
   TYPE_SCRIPT,
+  TYPE_METHOD,
+  TYPE_INITIALIZER,
 } FunctionType;
 
 typedef struct Compiler {
@@ -70,8 +72,13 @@ typedef struct Compiler {
   Local *locals;
 } Compiler;
 
+typedef struct ClassCompiler {
+  struct ClassCompiler *enclosing;
+} ClassCompiler;
+
 Parser parser;
 Compiler *current = NULL;
+ClassCompiler *currentClass = NULL;
 
 static void growLocalArray();
 
@@ -97,8 +104,13 @@ static void initCompiler(Compiler *compiler, FunctionType type) {
   Local *local = &current->locals[current->localCount++];
   local->depth = 0;
   local->isCaptured = false;
-  local->name.start = "";
-  local->name.length = 0;
+  if (type != TYPE_FUNCTION) {
+    local->name.start = "this";
+    local->name.length = 4;
+  } else {
+    local->name.start = "";
+    local->name.length = 0;
+  }
 }
 
 static Chunk *currentChunk() { return &current->function->chunk; }
@@ -190,7 +202,11 @@ static int emitJump(uint8_t instruction) {
 }
 
 static void emitReturn() {
-  emitByte(OP_NIL);
+  if (current->type == TYPE_INITIALIZER) {
+    emitBytes(OP_GET_LOCAL, 0);
+  } else {
+    emitByte(OP_NIL);
+  }
   emitByte(OP_RETURN);
 }
 
@@ -352,13 +368,7 @@ static void defineVariable(uint32_t global) {
     markInitialized();
     return;
   }
-  if (global >= 256u) {
-    writeChunk(currentChunk(), OP_DEFINE_GLOBAL_LONG, parser.previous.line);
-    WRITE_CHUNK_LONG(currentChunk(), global, parser.previous.line);
-    return;
-  }
-
-  emitBytes(OP_DEFINE_GLOBAL, global);
+  WRITE_OPERATION(currentChunk(), global, OP_DEFINE_GLOBAL);
 }
 
 static uint8_t argumentList() {
@@ -432,19 +442,12 @@ static OpCode getInstructionForNamedVariable(Token name, bool canAssign) {
 }
 
 static void handleLocal(bool canAssign, uint32_t localIdx) {
-  OpCode operation;
   if (canAssign && match(TOKEN_EQUAL)) {
     expression();
-    operation = OP_SET_LOCAL;
+    WRITE_OPERATION(currentChunk(), localIdx, OP_SET_LOCAL);
   } else {
-    operation = OP_GET_LOCAL;
+    WRITE_OPERATION(currentChunk(), localIdx, OP_GET_LOCAL);
   }
-  if (localIdx >= 256u) {
-    emitByte(++operation);
-    WRITE_CHUNK_LONG(currentChunk(), localIdx, parser.previous.line);
-    return;
-  }
-  emitBytes(operation, localIdx);
 }
 
 static void handleGlobal(Token name, bool canAssign) {
@@ -452,32 +455,20 @@ static void handleGlobal(Token name, bool canAssign) {
   OpCode operation;
   if (canAssign && match(TOKEN_EQUAL)) {
     expression();
-    operation = OP_SET_GLOBAL;
+    WRITE_OPERATION(currentChunk(), arg, OP_SET_GLOBAL);
   } else {
-    operation = OP_GET_GLOBAL;
+    WRITE_OPERATION(currentChunk(), arg, OP_GET_GLOBAL);
   }
-  if (arg >= 256u) {
-    emitByte(++operation);
-    WRITE_CHUNK_LONG(currentChunk(), arg, parser.previous.line);
-    return;
-  }
-  emitBytes(operation, arg);
 }
 
 static void handleUpvalue(bool canAssign, uint32_t arg) {
   OpCode operation;
   if (canAssign && match(TOKEN_EQUAL)) {
     expression();
-    operation = OP_SET_UPVALUE;
+    WRITE_OPERATION(currentChunk(), arg, OP_SET_UPVALUE);
   } else {
-    operation = OP_GET_UPVALUE;
+    WRITE_OPERATION(currentChunk(), arg, OP_GET_UPVALUE);
   }
-  if (arg >= 256u) {
-    emitByte(++operation);
-    WRITE_CHUNK_LONG(currentChunk(), arg, parser.previous.line);
-    return;
-  }
-  emitBytes(operation, arg);
 }
 
 static void namedVariable(Token name, bool canAssign) {
@@ -570,20 +561,16 @@ static void dot(bool canAssign) {
   consume(TOKEN_IDENTIFIER, "Expect property name after '.'.");
   uint32_t name = identifierConstant(&parser.previous);
 
-  OpCode operation;
   if (canAssign && match(TOKEN_EQUAL)) {
     expression();
-    operation = OP_SET_PROPERTY;
+    WRITE_OPERATION(currentChunk(), name, OP_SET_PROPERTY);
+  } else if (match(TOKEN_LEFT_PAREN)) {
+    uint8_t argCount = argumentList();
+    WRITE_OPERATION(currentChunk(), name, OP_INVOKE);
+    emitByte(argCount);
   } else {
-    operation = OP_GET_PROPERTY;
+    WRITE_OPERATION(currentChunk(), name, OP_GET_PROPERTY);
   }
-
-  if (name >= 256u) {
-    emitByte(++operation); // long instruction
-    WRITE_CHUNK_LONG(currentChunk(), name, parser.previous.line);
-    return;
-  }
-  emitBytes(operation, name);
 }
 
 static void literal(bool canAssign) {
@@ -600,6 +587,14 @@ static void literal(bool canAssign) {
   default:
     return; // Unreachable.
   }
+}
+
+static void this_(bool canAssign) {
+  if (currentClass == NULL) {
+    error("Can't use 'this' outside of a class.");
+    return;
+  }
+  variable(false);
 }
 
 ParseRule rules[] = {
@@ -637,7 +632,7 @@ ParseRule rules[] = {
     [TOKEN_PRINT] = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
     [TOKEN_SUPER] = {NULL, NULL, PREC_NONE},
-    [TOKEN_THIS] = {NULL, NULL, PREC_NONE},
+    [TOKEN_THIS] = {this_, NULL, PREC_NONE},
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
     [TOKEN_VAR] = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
@@ -776,6 +771,9 @@ static void returnStatement() {
   if (match(TOKEN_SEMICOLON)) {
     emitReturn();
   } else {
+    if (current->type == TYPE_INITIALIZER) {
+      error("Can't return a value from an initializer.");
+    }
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
     emitByte(OP_RETURN);
@@ -855,25 +853,45 @@ static void function(FunctionType type) {
     emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
     // we write three bytes as that is the maximum length of the chunk
     // and I don't want to handle variable sizes here as of now
-    WRITE_CHUNK_LONG(currentChunk(), compiler.upvalues[i].index, line);
+    WRITE_LONG_CHUNK(currentChunk(), compiler.upvalues[i].index, line);
   }
+}
+
+static void method() {
+  consume(TOKEN_IDENTIFIER, "Expect method name.");
+  uint32_t constant = identifierConstant(&parser.previous);
+  FunctionType type = TYPE_METHOD;
+  if (parser.previous.length == 4 &&
+      memcmp(parser.previous.start, "init", 4) == 0) {
+    type = TYPE_INITIALIZER;
+  }
+
+  function(type);
+  WRITE_OPERATION(currentChunk(), constant, OP_METHOD);
 }
 
 static void classDeclaration() {
   consume(TOKEN_IDENTIFIER, "Expect class name.");
+  Token className = parser.previous;
   uint32_t nameConstant = identifierConstant(&parser.previous);
   declareVariable();
 
-  if (nameConstant >= 256u) {
-    emitByte(OP_CLASS_LONG);
-    WRITE_CHUNK_LONG(currentChunk(), nameConstant, parser.previous.line);
-  } else {
-    emitBytes(OP_CLASS, nameConstant);
-  }
+  WRITE_OPERATION(currentChunk(), nameConstant, OP_CLASS);
   defineVariable(nameConstant);
 
+  ClassCompiler classCompiler;
+  classCompiler.enclosing = currentClass;
+  currentClass = &classCompiler;
+
+  namedVariable(className, false);
   consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
+  while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+    method();
+  }
   consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
+  emitByte(OP_POP);
+
+  currentClass = currentClass->enclosing;
 }
 
 static void funDeclaration() {

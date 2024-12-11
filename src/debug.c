@@ -40,6 +40,16 @@ static int constantInstruction(bool isLong, const char *name, Chunk *chunk,
   return offset + (isLong ? 4 : 2);
 }
 
+static int invokeInstruction(bool isLong, const char *name, Chunk *chunk,
+                             int offset) {
+  uint32_t constant = readConstant(chunk, isLong, offset);
+  uint8_t argCount = chunk->code[offset + (isLong ? 4 : 2)];
+  printf("%-16s (%d args) %4d '", name, argCount, constant);
+  printValue(chunk->constants.values[constant]);
+  printf("'\n");
+  return offset + (isLong ? 5 : 3);
+}
+
 static int jumpInstruction(const char *name, int sign, Chunk *chunk,
                            int offset) {
   uint16_t jump = (uint16_t)(chunk->code[offset + 1] << 8);
@@ -132,6 +142,16 @@ int disassembleInstruction(Chunk *chunk, int offset) {
     return constantInstruction(
         isLong, isLong ? "OP_SET_PROPERTY_LONG" : "OP_SET_PROPERTY", chunk,
         offset);
+  case OP_METHOD_LONG:
+    isLong = true;
+  case OP_METHOD:
+    return constantInstruction(isLong, isLong ? "OP_METHOD_LONG" : "OP_METHOD",
+                               chunk, offset);
+  case OP_INVOKE_LONG:
+    isLong = true;
+  case OP_INVOKE:
+    return invokeInstruction(isLong, isLong ? "OP_INVOKE_LONG" : "OP_INVOKE",
+                             chunk, offset);
   case OP_RETURN:
     return simpleInstruction("OP_RETURN", offset);
   case OP_NEGATE:

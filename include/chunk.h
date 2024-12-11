@@ -5,7 +5,7 @@
 #include "line.h"
 #include "value.h"
 
-#define WRITE_CHUNK_LONG(chunk, variable, line)                                \
+#define WRITE_LONG_CHUNK(chunk, variable, line)                                \
   do {                                                                         \
     uint8_t a, b, c;                                                           \
     c = variable & 0xFF;                                                       \
@@ -16,6 +16,16 @@
     writeChunk(chunk, a, line);                                                \
     writeChunk(chunk, b, line);                                                \
     writeChunk(chunk, c, line);                                                \
+  } while (false)
+
+#define WRITE_OPERATION(chunk, variable, operation)                            \
+  do {                                                                         \
+    if (variable > 256u) {                                                     \
+      writeChunk(chunk, operation + 1, parser.previous.line);                  \
+      WRITE_LONG_CHUNK(chunk, variable, parser.previous.line);                 \
+    } else {                                                                   \
+      emitBytes(operation, variable);                                          \
+    }                                                                          \
   } while (false)
 
 typedef enum {
@@ -51,6 +61,10 @@ typedef enum {
   OP_GET_PROPERTY_LONG,
   OP_SET_PROPERTY,
   OP_SET_PROPERTY_LONG,
+  OP_METHOD,
+  OP_METHOD_LONG,
+  OP_INVOKE,
+  OP_INVOKE_LONG,
   // operators, etc
   OP_NIL,
   OP_TRUE,
