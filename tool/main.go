@@ -89,15 +89,15 @@ func main() {
 	}
 
 	// No inheritance in C yet.
-	// noCInheritance := Filemap{
-	// 	"test/class/local_inherit_other.lox": suite.Skip,
-	// 	"test/class/local_inherit_self.lox":  suite.Skip,
-	// 	"test/class/inherit_self.lox":        suite.Skip,
-	// 	"test/class/inherited_method.lox":    suite.Skip,
-	// 	"test/inheritance":                   suite.Skip,
-	// 	"test/regression/394.lox":            suite.Skip,
-	// 	"test/super":                         suite.Skip,
-	// }
+	noInheritance := Filemap{
+		"test/class/local_inherit_other.lox": suite.Skip,
+		"test/class/local_inherit_self.lox":  suite.Skip,
+		"test/class/inherit_self.lox":        suite.Skip,
+		"test/class/inherited_method.lox":    suite.Skip,
+		"test/inheritance":                   suite.Skip,
+		"test/regression/394.lox":            suite.Skip,
+		"test/super":                         suite.Skip,
+	}
 
 	// removed early chapters as we have a whole interpreter now
 	suites = map[string]*suite.Suite{
@@ -153,24 +153,24 @@ func main() {
 			"test": suite.Pass,
 		}.Copy(earlyChapters).Copy(noClasses)),
 
-		// "chap27_classes": suite.NewSuite(Filemap{
-		// 	"test": suite.Pass,
-		// 	// No methods.
-		// 	"test/assignment/to_this.lox":                  suite.Skip,
-		// 	"test/class/local_reference_self.lox":          suite.Skip,
-		// 	"test/class/reference_self.lox":                suite.Skip,
-		// 	"test/closure/close_over_method_parameter.lox": suite.Skip,
-		// 	"test/constructor":                             suite.Skip,
-		// 	"test/field/get_and_set_method.lox":            suite.Skip,
-		// 	"test/field/method.lox":                        suite.Skip,
-		// 	"test/field/method_binds_this.lox":             suite.Skip,
-		// 	"test/method":                                  suite.Skip,
-		// 	"test/operator/equals_class.lox":               suite.Skip,
-		// 	"test/operator/equals_method.lox":              suite.Skip,
-		// 	"test/return/in_method.lox":                    suite.Skip,
-		// 	"test/this":                                    suite.Skip,
-		// 	"test/variable/local_from_method.lox":          suite.Skip,
-		// }.Copy(earlyChapters).Copy(noCInheritance)),
+		"chap27_classes": suite.NewSuite(Filemap{
+			"test": suite.Pass,
+			// No methods.
+			"test/assignment/to_this.lox":                  suite.Skip,
+			"test/class/local_reference_self.lox":          suite.Skip,
+			"test/class/reference_self.lox":                suite.Skip,
+			"test/closure/close_over_method_parameter.lox": suite.Skip,
+			"test/constructor":                             suite.Skip,
+			"test/field/get_and_set_method.lox":            suite.Skip,
+			"test/field/method.lox":                        suite.Skip,
+			"test/field/method_binds_this.lox":             suite.Skip,
+			"test/method":                                  suite.Skip,
+			"test/operator/equals_class.lox":               suite.Skip,
+			"test/operator/equals_method.lox":              suite.Skip,
+			"test/return/in_method.lox":                    suite.Skip,
+			"test/this":                                    suite.Skip,
+			"test/variable/local_from_method.lox":          suite.Skip,
+		}.Copy(earlyChapters).Copy(noInheritance)),
 
 		// "chap28_methods": suite.NewSuite(Filemap{
 		// 	"test": suite.Pass,

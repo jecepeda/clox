@@ -118,6 +118,20 @@ int disassembleInstruction(Chunk *chunk, int offset) {
   case OP_CALL:
     return byteInstruction(isLong, isLong ? "OP_CALL_LONG" : "OP_CALL", chunk,
                            offset);
+  case OP_CLASS:
+    return constantInstruction(false, "OP_CLASS", chunk, offset);
+  case OP_GET_PROPERTY_LONG:
+    isLong = true;
+  case OP_GET_PROPERTY:
+    return constantInstruction(
+        isLong, isLong ? "OP_GET_PROPERTY_LONG" : "OP_GET_PROPERTY", chunk,
+        offset);
+  case OP_SET_PROPERTY_LONG:
+    isLong = true;
+  case OP_SET_PROPERTY:
+    return constantInstruction(
+        isLong, isLong ? "OP_SET_PROPERTY_LONG" : "OP_SET_PROPERTY", chunk,
+        offset);
   case OP_RETURN:
     return simpleInstruction("OP_RETURN", offset);
   case OP_NEGATE:

@@ -33,8 +33,8 @@ void freeChunk(Chunk *chunk) {
 uint32_t makeConstant(Chunk *chunk, Value value) {
   stackPush(&vm.stack, value);
   writeValueArray(&chunk->constants, value);
-  return chunk->constants.count - 1;
   stackPop(&vm.stack);
+  return chunk->constants.count - 1;
 }
 
 void writeConstant(Chunk *chunk, OpCode code, Value value, int line) {

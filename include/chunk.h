@@ -19,28 +19,39 @@
   } while (false)
 
 typedef enum {
-  OP_CONSTANT,           // 2 bytes (code, operand)
-  OP_CONSTANT_LONG,      // 4 bytes (1 code, 3 operand)
-                         // globals
-  OP_DEFINE_GLOBAL,      // 2 bytes (code, operand)
-  OP_DEFINE_GLOBAL_LONG, // 4 bytes (1 code, 3 operand)
-  OP_SET_GLOBAL,         // 2 bytes (code, operand)
-  OP_SET_GLOBAL_LONG,    // 4 bytes (1 code, 3 operand)
-  OP_GET_GLOBAL,         // 2 bytes (code, operand)
-  OP_GET_GLOBAL_LONG,    // 4 bytes (1 code, 3 operand)
-                         // locals
-  OP_GET_LOCAL,          // 2 bytes (code, operand)
-  OP_GET_LOCAL_LONG,     // 4 bytes (1 code, 3 operand)
-  OP_SET_LOCAL,          // 2 bytes (code, operand)
-  OP_SET_LOCAL_LONG,     // 4 bytes (1 code, 3 operand)
-  OP_CLOSURE,            // 2 bytes (code, operand)
-  OP_CLOSURE_LONG,       // 4 bytes (1 code, 3 operand)
-  OP_GET_UPVALUE,        // 2 bytes (code, operand) get upvalue from the current
-  OP_GET_UPVALUE_LONG,   // 4 bytes (1 code, 3 operand)
-  OP_SET_UPVALUE,        // 2 bytes (code, operand) get upvalue from the current
-  OP_SET_UPVALUE_LONG,   // 4 bytes (1 code, 3 operand)
-  OP_CLOSE_UPVALUE,      // close upvalue, 1 byte (code)
-                         // operators, etc
+  // long enums consists of 4 bytes
+  // whereas normal ones consists of 1/2 bytes,
+  // depending if they need to extract data from a constant table or an index
+  OP_CONSTANT,
+  OP_CONSTANT_LONG,
+  // globals
+  OP_DEFINE_GLOBAL,
+  OP_DEFINE_GLOBAL_LONG,
+  OP_SET_GLOBAL,
+  OP_SET_GLOBAL_LONG,
+  OP_GET_GLOBAL,
+  OP_GET_GLOBAL_LONG,
+  // locals
+  OP_GET_LOCAL,
+  OP_GET_LOCAL_LONG,
+  OP_SET_LOCAL,
+  OP_SET_LOCAL_LONG,
+  OP_CLOSURE,
+  OP_CLOSURE_LONG,
+  // upvalues
+  OP_CLOSE_UPVALUE,
+  OP_GET_UPVALUE,
+  OP_GET_UPVALUE_LONG,
+  OP_SET_UPVALUE,
+  OP_SET_UPVALUE_LONG,
+  // classes
+  OP_CLASS,
+  OP_CLASS_LONG,
+  OP_GET_PROPERTY,
+  OP_GET_PROPERTY_LONG,
+  OP_SET_PROPERTY,
+  OP_SET_PROPERTY_LONG,
+  // operators, etc
   OP_NIL,
   OP_TRUE,
   OP_FALSE,

@@ -126,6 +126,11 @@ static bool call(ObjClosure *closure, int argCount) {
 static bool callValue(Value callee, int argCount) {
   if (IS_OBJ(callee)) {
     switch (OBJ_TYPE(callee)) {
+    case OBJ_CLASS: {
+      ObjClass *klass = AS_CLASS(callee);
+      vm.stack.items[vm.stack.top - argCount - 1] = OBJ_VAL(newInstance(klass));
+      return true;
+    }
     case OBJ_CLOSURE:
       return call(AS_CLOSURE(callee), argCount);
     case OBJ_NATIVE: {
@@ -374,6 +379,43 @@ static InterpretResult run() {
       frame = &vm.frames[vm.frameCount - 1];
       break;
     }
+    case OP_GET_PROPERTY_LONG:
+      isLong = true; // don't break, fall through
+    case OP_GET_PROPERTY: {
+      if (!IS_INSTANCE(stackPeek(&vm.stack, 0))) {
+        runtimeError("Only instances have properties.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      ObjInstance *instance = AS_INSTANCE(stackPeek(&vm.stack, 0));
+      ObjString *name = READ_STRING(isLong);
+      Value value;
+      if (tableGet(&instance->fields, name, &value)) {
+        stackPop(&vm.stack); // Instance.
+        stackPush(&vm.stack, value);
+        break;
+      }
+      runtimeError("Undefined property '%s'.", name->chars);
+      return INTERPRET_RUNTIME_ERROR;
+    }
+    case OP_SET_PROPERTY_LONG:
+      isLong = true; // don't break, fall through
+    case OP_SET_PROPERTY: {
+      if (!IS_INSTANCE(stackPeek(&vm.stack, 1))) {
+        runtimeError("Only instances have fields.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      ObjInstance *instance = AS_INSTANCE(stackPeek(&vm.stack, 1));
+      tableSet(&instance->fields, READ_STRING(isLong), stackPeek(&vm.stack, 0));
+      Value value = stackPop(&vm.stack);
+      stackPop(&vm.stack);
+      stackPush(&vm.stack, value);
+      break;
+    }
+    case OP_CLASS_LONG:
+      isLong = true; // don't break, fall through
+    case OP_CLASS:
+      stackPush(&vm.stack, OBJ_VAL(newClass(READ_STRING(isLong))));
+      break;
     case OP_CLOSE_UPVALUE:
       closeUpvalues(vm.stack.top - 1);
       stackPop(&vm.stack);
