@@ -20,7 +20,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0")
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     message(STATUS "Configuring Release build")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -Oz")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -Os")
 endif()
 
 # Set the output directory for the executable
